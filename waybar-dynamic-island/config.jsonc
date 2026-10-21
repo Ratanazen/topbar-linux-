@@ -120,6 +120,9 @@
       "(.*) - kitty": "󰄛 $1",
       "(.*) - Foot": "󰄛 $1",
       "(.*) - Spotify": " $1",
+      "(.*) - Telegram": "󰖣 $1",
+      "(.*)Telegram(.*)": "󰖣 $1",
+      "^Telegram$": "󰖣 Telegram",
       "(.*)cbonsai(.*)": "󰊠 cbonsai --screensave ~",
       "^$": " Desktop"
     }

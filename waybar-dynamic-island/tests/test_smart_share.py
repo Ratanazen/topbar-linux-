@@ -324,7 +324,7 @@ class TestWindowManager(unittest.TestCase):
         self.assertEqual(WindowManager.resolve_app_icon("brave-browser"), "")
         self.assertEqual(WindowManager.resolve_app_icon("thunar"), "󰉋")
         self.assertEqual(WindowManager.resolve_app_icon("code"), "󰨞")
-        self.assertEqual(WindowManager.resolve_app_icon("org.telegram.desktop"), "󰈰")
+        self.assertEqual(WindowManager.resolve_app_icon("org.telegram.desktop"), "󰖣")
         self.assertEqual(WindowManager.resolve_app_icon("discord"), "󰙯")
         self.assertEqual(WindowManager.resolve_app_icon("unknown_binary"), "󰖲")
 

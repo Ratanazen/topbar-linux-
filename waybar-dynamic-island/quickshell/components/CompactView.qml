@@ -19,11 +19,25 @@ Row {
             onLongPressed: IslandBridge.toggleQuickActions()
         }
 
+        Image {
+            id: compAppSvg
+            width: 14
+            height: 14
+            anchors.verticalCenter: parent.verticalCenter
+            source: (IslandBridge.focusedWindow && IslandBridge.focusedWindow.icon_path) ? ("file://" + IslandBridge.focusedWindow.icon_path) : ((IslandBridge.iconPath && IslandBridge.iconPath.length > 0) ? ("file://" + IslandBridge.iconPath) : "")
+            fillMode: Image.PreserveAspectFit
+            visible: status === Image.Ready && source.toString().length > 0
+            asynchronous: true
+            cache: true
+        }
+
         Text {
             text: (IslandBridge.focusedWindow && IslandBridge.focusedWindow.icon) ? IslandBridge.focusedWindow.icon : (IslandBridge.icon || "󰸗")
             color: Theme.accent
             font.pixelSize: 13
+            font.family: Theme.fontFamily
             anchors.verticalCenter: parent.verticalCenter
+            visible: !compAppSvg.visible
         }
 
         Text {
@@ -115,11 +129,29 @@ Row {
                 spacing: 6
 
                 // App Icon (Clicking triggers restore animation)
-                Text {
-                    text: IslandBridge.selectedMinimizedWindow ? (IslandBridge.selectedMinimizedWindow.icon || "󰖲") : "󰖲"
-                    color: Theme.accentYellow
-                    font.pixelSize: 13
+                Item {
+                    width: 15
+                    height: 15
                     anchors.verticalCenter: parent.verticalCenter
+
+                    Image {
+                        id: minAppSvg
+                        anchors.fill: parent
+                        source: (IslandBridge.selectedMinimizedWindow && IslandBridge.selectedMinimizedWindow.icon_path) ? ("file://" + IslandBridge.selectedMinimizedWindow.icon_path) : ""
+                        fillMode: Image.PreserveAspectFit
+                        visible: status === Image.Ready && source.toString().length > 0
+                        asynchronous: true
+                        cache: true
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: IslandBridge.selectedMinimizedWindow ? (IslandBridge.selectedMinimizedWindow.icon || "󰖲") : "󰖲"
+                        color: Theme.accentYellow
+                        font.pixelSize: 13
+                        font.family: Theme.fontFamily
+                        visible: !minAppSvg.visible
+                    }
 
                     scale: pillHov.hovered ? 1.15 : 1.0
                     Behavior on scale {

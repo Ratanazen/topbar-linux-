@@ -84,6 +84,7 @@ from core.state_manager import (
     IslandState,
     build_progress_bar,
     resolve_app_icon,
+    resolve_app_icon_svg,
     resolve_language_info,
     truncate_text,
 )
@@ -425,6 +426,10 @@ class DynamicIslandDaemon:
         winner = self.events.arbitrate(persistent, default_idle)
         winner.system_cpu = getattr(self, "current_cpu", 0.0)
         winner.system_mem = getattr(self, "current_mem", 0.0)
+        winner.system_disk_used = getattr(self.system_metrics_monitor, "disk_used_gb", 0.0)
+        winner.system_disk_total = getattr(self.system_metrics_monitor, "disk_total_gb", 0.0)
+        winner.system_disk_pct = getattr(self.system_metrics_monitor, "disk_pct", 0.0)
+        winner.system_cpu_name = getattr(self.system_metrics_monitor, "cpu_model", "CPU")
         winner.dropped_files = getattr(self, "active_dropped_files", [])
         winner.share_targets = getattr(self, "active_share_targets", [])
         winner.running_windows = self.window_monitor.get_windows()
@@ -1069,11 +1074,16 @@ class DynamicIslandDaemon:
             pri = int(args.get("priority", Priority.CONNECTIVITY))
             pri = max(10, min(95, pri))
 
+            given_icon = args.get("icon")
+            icon = given_icon if (given_icon and given_icon != "󰋼") else resolve_app_icon(title)
+            icon_path = resolve_app_icon_svg(title, source, st_name)
+
             custom_ev = IslandState(
                 source=source,
                 state=st_name,
                 priority=pri,
-                icon=args.get("icon", "󰋼"),
+                icon=icon,
+                icon_path=icon_path,
                 title=title,
                 subtitle=message,
                 css_class=st_name,
@@ -1784,6 +1794,25 @@ class DynamicIslandDaemon:
             self.push_transient_event(ev)
             self.render_and_broadcast()
             return {"version": 1, "status": "ok", "message": "Showing Quick Actions Control Center"}
+
+        elif action in ("panel_island", "panel", "stats_panel", "system_panel"):
+            current = self.get_current_state()
+            if current and (current.state == "panel_island" or getattr(current, "event_id", "") == "panel-island-ui"):
+                self.dismiss_transient()
+                return {"version": 1, "status": "ok", "message": "Closed Panel Island"}
+            ev = IslandState(
+                event_id="panel-island-ui",
+                source="system",
+                state="panel_island",
+                priority=Priority.SETTINGS,
+                icon="",
+                title="Panel Island",
+                subtitle="System Metrics",
+                duration=None
+            )
+            self.push_transient_event(ev)
+            self.render_and_broadcast()
+            return {"version": 1, "status": "ok", "message": "Showing Panel Island"}
 
         return {"version": 1, "status": "error", "message": f"Unknown action: {action}"}
 

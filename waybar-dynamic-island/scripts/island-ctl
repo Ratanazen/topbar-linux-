@@ -265,17 +265,20 @@ def main():
         parser.add_argument("--duration", type=float, default=3.0, help="Duration in seconds")
         parser.add_argument("--state", default="system", help="Animation state name")
         parser.add_argument("--priority", type=int, default=40, help="Priority (10-90)")
-        parser.add_argument("--icon", default="󰋼", help="Icon glyph")
+        parser.add_argument("--icon", default=None, help="Icon glyph (optional, auto-resolved from title/app if omitted)")
         args = parser.parse_args(sys.argv[2:])
 
-        res = send_ipc("event", {
+        payload = {
             "title": args.title,
             "message": args.message,
             "duration": args.duration,
             "state": args.state,
             "priority": args.priority,
-            "icon": args.icon
-        })
+        }
+        if args.icon:
+            payload["icon"] = args.icon
+
+        res = send_ipc("event", payload)
         print(res.get("message", "Event dispatched"))
 
     elif cmd == "timer":
@@ -1047,6 +1050,10 @@ def main():
         else:
             sys.stderr.write("Usage: island-ctl settings <get | set <key> <val> | reset | export | import <json> | ui>\n")
             sys.exit(1)
+
+    elif cmd in ("panel", "panel_island", "stats_panel"):
+        res = send_ipc("panel_island")
+        print(res.get("message", "Toggled Panel Island"))
 
     elif cmd == "menu":
         launch_menu()

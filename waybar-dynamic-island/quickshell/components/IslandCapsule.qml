@@ -32,6 +32,7 @@ Rectangle {
             case "sharePicker": baseWidth = 460; break;
             case "dragActive": baseWidth = 340; break;
             case "settings": baseWidth = 400; break;
+            case "panel_island": baseWidth = 380; break;
             case "quickActions":
             case "quick_settings": baseWidth = 380; break;
             case "expanded": baseWidth = 360; break;
@@ -85,6 +86,7 @@ Rectangle {
             case "media_expanded": return 134;
             case "expanded": return (IslandBridge.minimizedWindows && IslandBridge.minimizedWindows.length > 0) ? 142 : 126;
             case "settings": return 304;
+            case "panel_island": return 138;
             case "quickActions":
             case "quick_settings": return 220;
             case "notification": return 60;
@@ -110,6 +112,7 @@ Rectangle {
             return 22;
         }
         switch (IslandBridge.visualState) {
+            case "panel_island": return 24;
             case "sharePicker": return 24;
             case "dragActive": return 22;
             case "minimized_apps": return 22;
@@ -170,22 +173,23 @@ Rectangle {
     // Smooth Spring Morphing Transitions
     Behavior on width {
         NumberAnimation {
-            duration: IslandBridge.reducedMotion ? 0 : 280
+            duration: IslandBridge.reducedMotion ? 0 : 320
             easing.type: Easing.OutBack
-            easing.overshoot: 1.05
+            easing.overshoot: 1.15
         }
     }
 
     Behavior on height {
         NumberAnimation {
-            duration: IslandBridge.reducedMotion ? 0 : 250
-            easing.type: Easing.OutCubic
+            duration: IslandBridge.reducedMotion ? 0 : 280
+            easing.type: Easing.OutBack
+            easing.overshoot: 1.10
         }
     }
 
     Behavior on radius {
         NumberAnimation {
-            duration: IslandBridge.reducedMotion ? 0 : 250
+            duration: IslandBridge.reducedMotion ? 0 : 260
             easing.type: Easing.OutCubic
         }
     }

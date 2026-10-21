@@ -730,6 +730,46 @@ class TestV3Enhancements(unittest.TestCase):
         self.assertEqual(payload["system_cpu"], 12.5)
         self.assertEqual(payload["system_mem"], 45.2)
 
+    def test_svg_icon_and_telegram_resolution(self):
+        from core.state_manager import resolve_app_icon, resolve_app_icon_svg
+        self.assertEqual(resolve_app_icon("Telegram"), "󰖣")
+        self.assertEqual(resolve_app_icon("org.telegram.desktop"), "󰖣")
+
+        tg_svg = resolve_app_icon_svg("Telegram", "telegram")
+        self.assertTrue(tg_svg.endswith("telegram.svg") or tg_svg.endswith("org.telegram.desktop.svg"), f"Expected telegram SVG, got {tg_svg}")
+        self.assertTrue(os.path.exists(tg_svg), f"File {tg_svg} does not exist")
+
+    def test_panel_island_and_disk_metrics_payload(self):
+        state = IslandState(
+            source="system",
+            state="panel_island",
+            title="Panel Island",
+            icon="",
+            system_cpu=18.4,
+            system_mem=42.1,
+            system_disk_used=215.3,
+            system_disk_total=254.2,
+            system_disk_pct=84.7,
+            system_cpu_name="Ryzen 5 7520U"
+        )
+        payload = state.to_waybar_payload(self.daemon.config)
+        self.assertEqual(payload["state"], "panel_island")
+        self.assertEqual(payload["system_disk_used"], 215.3)
+        self.assertEqual(payload["system_disk_total"], 254.2)
+        self.assertEqual(payload["system_disk_pct"], 84.7)
+        self.assertEqual(payload["system_cpu_name"], "Ryzen 5 7520U")
+
+    def test_panel_island_dispatch_action(self):
+        loop = asyncio.new_event_loop()
+        try:
+            res = loop.run_until_complete(self.daemon.dispatch_action("panel_island", [], None))
+            self.assertEqual(res["status"], "ok")
+            current = self.daemon.get_current_state()
+            self.assertEqual(current.state, "panel_island")
+            self.assertEqual(current.icon, "")
+        finally:
+            loop.close()
+
 
 class TestSmartShareSystem(unittest.TestCase):
     """Smart Share & Drag-and-Drop Tests"""

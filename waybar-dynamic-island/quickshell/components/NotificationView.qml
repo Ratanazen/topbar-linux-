@@ -11,15 +11,29 @@ Row {
     Rectangle {
         width: 32
         height: 32
-        radius: 16
-        color: Qt.rgba(1, 1, 1, 0.1)
+        radius: 8
+        color: (IslandBridge.iconPath && IslandBridge.iconPath.length > 0 && appIconImg.visible) ? "transparent" : Qt.rgba(1, 1, 1, 0.1)
         anchors.verticalCenter: parent.verticalCenter
+        clip: true
+
+        Image {
+            id: appIconImg
+            anchors.fill: parent
+            anchors.margins: 2
+            source: (IslandBridge.iconPath && IslandBridge.iconPath.length > 0) ? ("file://" + IslandBridge.iconPath) : ""
+            fillMode: Image.PreserveAspectFit
+            visible: status === Image.Ready && IslandBridge.iconPath.length > 0
+            asynchronous: true
+            cache: true
+        }
 
         Text {
             anchors.centerIn: parent
             text: IslandBridge.icon ? IslandBridge.icon : (IslandBridge.priority >= 75 ? "󰵚" : "󰂚")
             color: IslandBridge.priority >= 75 ? Theme.accentRed : Theme.accent
             font.pixelSize: 16
+            font.family: Theme.fontFamily
+            visible: !appIconImg.visible
         }
     }
 

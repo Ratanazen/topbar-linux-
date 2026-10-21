@@ -17,6 +17,8 @@ import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from core.state_manager import resolve_app_icon_svg
+
 log = logging.getLogger("ratana-island.share")
 
 
@@ -148,13 +150,15 @@ class ShareManager:
             return cached
 
         res = None
+        tg_icon_path = resolve_app_icon_svg("telegram")
         for candidate in ("telegram-desktop", "Telegram", "telegram"):
             path = shutil.which(candidate)
             if path:
                 res = {
                     "id": "telegram",
                     "name": "Telegram",
-                    "icon": "󰈰",
+                    "icon": "󰖣",
+                    "icon_path": tg_icon_path,
                     "installed": True,
                     "exec": path,
                     "command": [path],
@@ -173,7 +177,8 @@ class ShareManager:
                     res = {
                         "id": "telegram",
                         "name": "Telegram (Flatpak)",
-                        "icon": "󰈰",
+                        "icon": "󰖣",
+                        "icon_path": tg_icon_path,
                         "installed": True,
                         "exec": "flatpak",
                         "command": ["flatpak", "run", "org.telegram.desktop"],
@@ -189,7 +194,8 @@ class ShareManager:
             res = {
                 "id": "telegram",
                 "name": "Telegram",
-                "icon": "󰈰",
+                "icon": "󰖣",
+                "icon_path": tg_icon_path,
                 "installed": False,
                 "category": "chat",
                 "badge": "Not Installed",

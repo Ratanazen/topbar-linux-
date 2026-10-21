@@ -22,6 +22,7 @@ QtObject {
     property string title: ""
     property string subtitle: ""
     property string icon: "󰸗"
+    property string iconPath: ""
     property real progressPct: 0.0
     property string progressBar: ""
     property int priority: 10
@@ -38,9 +39,14 @@ QtObject {
     property string deviceMac: ""
     property var deviceBattery: null
 
-    // Live System Metrics (CPU / RAM)
+    // Live System Metrics (CPU / RAM / Disk)
     property real systemCpu: 0.0
     property real systemMem: 0.0
+    property real systemDiskUsed: 0.0
+    property real systemDiskTotal: 0.0
+    property real systemDiskPct: 0.0
+    property string systemCpuName: "Ryzen 5"
+    property bool panelOpen: false
 
     // Dock Configuration & State
     property bool dockEnabled: false
@@ -118,7 +124,9 @@ QtObject {
 
     // Compute effective visual state across all states
     function updateVisualState() {
-        if (wifiOpen || activeState === "wifi_manager") {
+        if (panelOpen || activeState === "panel_island") {
+            visualState = "panel_island";
+        } else if (wifiOpen || activeState === "wifi_manager") {
             visualState = "wifi_manager";
         } else if (bluetoothOpen || activeState === "bluetooth_manager") {
             visualState = "bluetooth_manager";
@@ -200,6 +208,7 @@ QtObject {
                         if (root.title !== (msg.title || "")) root.title = msg.title || "";
                         if (root.subtitle !== (msg.subtitle || "")) root.subtitle = msg.subtitle || "";
                         if (root.icon !== (msg.icon || "󰸗")) root.icon = msg.icon || "󰸗";
+                        if (msg.icon_path !== undefined && root.iconPath !== (msg.icon_path || "")) root.iconPath = msg.icon_path || "";
                         var nextProg = msg.progress_pct !== undefined ? Number(msg.progress_pct) : 0.0;
                         if (Math.abs(root.progressPct - nextProg) > 0.01) root.progressPct = nextProg;
                         if (root.progressBar !== (msg.progress_bar || "")) root.progressBar = msg.progress_bar || "";
@@ -230,6 +239,18 @@ QtObject {
                         if (msg.system_mem !== undefined) {
                             var nMem = Number(msg.system_mem);
                             if (Math.abs(root.systemMem - nMem) >= 0.5) root.systemMem = nMem;
+                        }
+                        if (msg.system_disk_used !== undefined) {
+                            root.systemDiskUsed = Number(msg.system_disk_used);
+                        }
+                        if (msg.system_disk_total !== undefined) {
+                            root.systemDiskTotal = Number(msg.system_disk_total);
+                        }
+                        if (msg.system_disk_pct !== undefined) {
+                            root.systemDiskPct = Number(msg.system_disk_pct);
+                        }
+                        if (msg.system_cpu_name !== undefined && msg.system_cpu_name.length > 0) {
+                            root.systemCpuName = msg.system_cpu_name;
                         }
                         if (msg.dock_enabled !== undefined && root.dockEnabled !== Boolean(msg.dock_enabled)) {
                             root.dockEnabled = Boolean(msg.dock_enabled);
@@ -343,6 +364,7 @@ QtObject {
     function dndToggle() { sendCommand("dnd", ["toggle"]); }
     function stopTimer() { sendCommand("timer", ["stop"]); }
     function toggleDock() { sendCommand("dock", ["toggle"]); }
+    function togglePanelIsland() { sendCommand("panel_island", []); }
 
     // Smart Share Actions
     function inspectFiles(urls) {

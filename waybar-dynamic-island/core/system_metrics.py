@@ -9,16 +9,35 @@ import asyncio
 import logging
 from typing import Callable, Optional, Tuple
 
+import shutil
+
 log = logging.getLogger("ratana-island")
 
 
 class SystemMetricsMonitor:
-    def __init__(self, on_metrics_updated: Optional[Callable[[float, float], None]] = None):
+    def __init__(self, on_metrics_updated: Optional[Callable[..., None]] = None):
         self.on_metrics_updated = on_metrics_updated
         self.last_total: int = 0
         self.last_idle: int = 0
         self.cpu_pct: float = 0.0
         self.mem_pct: float = 0.0
+        self.disk_used_gb: float = 0.0
+        self.disk_total_gb: float = 0.0
+        self.disk_pct: float = 0.0
+        self.cpu_model: str = self._read_cpu_model()
+
+    def _read_cpu_model(self) -> str:
+        try:
+            with open("/proc/cpuinfo", "r") as f:
+                for line in f:
+                    if "model name" in line:
+                        name = line.split(":", 1)[1].strip()
+                        # Shorten if long, e.g., "AMD Ryzen 5 7520U with Radeon Graphics" -> "Ryzen 5 7520U"
+                        name = name.replace("AMD ", "").replace("Intel(R) Core(TM) ", "").replace(" with Radeon Graphics", "").replace(" CPU", "").strip()
+                        return name
+        except Exception:
+            pass
+        return "CPU"
 
     def read_metrics_sync(self) -> Tuple[float, float]:
         """Read instant CPU and RAM utilization percentages."""
@@ -54,6 +73,16 @@ class SystemMetricsMonitor:
                         break
             if total_kb > 0:
                 self.mem_pct = round(max(0.0, min(100.0, (1.0 - avail_kb / total_kb) * 100.0)), 1)
+        except Exception:
+            pass
+
+        # Read Disk Usage
+        try:
+            total_b, used_b, free_b = shutil.disk_usage("/")
+            self.disk_used_gb = round(used_b / (1024**3), 1)
+            self.disk_total_gb = round(total_b / (1024**3), 1)
+            if total_b > 0:
+                self.disk_pct = round((used_b / total_b) * 100.0, 1)
         except Exception:
             pass
 

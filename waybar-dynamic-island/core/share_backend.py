@@ -15,6 +15,8 @@ import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from core.state_manager import resolve_app_icon_svg
+
 log = logging.getLogger("ratana-island")
 
 
@@ -128,11 +130,13 @@ class ShareManager:
 
         # 1. Telegram Desktop
         tg_bin = shutil.which("Telegram") or shutil.which("telegram-desktop")
+        tg_icon_path = resolve_app_icon_svg("telegram")
         if tg_bin:
             targets.append({
                 "id": "telegram",
                 "name": "Telegram Desktop",
                 "icon": "󰖣",
+                "icon_path": tg_icon_path,
                 "available": True,
                 "badge": "Installed",
                 "description": "Open Telegram to drag/paste files into chat",
@@ -143,6 +147,7 @@ class ShareManager:
                 "id": "telegram",
                 "name": "Telegram Desktop",
                 "icon": "󰖣",
+                "icon_path": tg_icon_path,
                 "available": False,
                 "badge": "Missing",
                 "description": "Telegram Desktop is not installed",
@@ -151,11 +156,13 @@ class ShareManager:
 
         # 2. Discord (Vesktop / WebCord / official Discord)
         discord_bin = shutil.which("discord") or shutil.which("vesktop") or shutil.which("webcord")
+        discord_icon_path = resolve_app_icon_svg("discord")
         if discord_bin:
             targets.append({
                 "id": "discord",
                 "name": "Discord",
                 "icon": "󰙯",
+                "icon_path": discord_icon_path,
                 "available": True,
                 "badge": "Installed",
                 "description": "Open Discord to share files in chat",

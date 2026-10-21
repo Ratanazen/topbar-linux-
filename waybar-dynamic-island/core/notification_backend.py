@@ -11,7 +11,7 @@ import re
 from typing import Any, Callable
 
 from core.priority_manager import Priority
-from core.state_manager import IslandState, resolve_app_icon, truncate_text
+from core.state_manager import IslandState, resolve_app_icon, resolve_app_icon_svg, truncate_text
 
 log = logging.getLogger("ratana-island")
 
@@ -124,6 +124,7 @@ class NotificationBackend:
                             css = "notification urgent" if is_urgent else "notification"
 
                             icon = "󰵚" if is_urgent else resolve_app_icon(app_name, app_icon, summary)
+                            icon_svg = resolve_app_icon_svg(app_name, app_icon, summary)
                             disp_summary = truncate_text(summary or app_name, 22)
                             disp_body = truncate_text(body, 20) if body else ""
                             dur = (
@@ -137,6 +138,7 @@ class NotificationBackend:
                                 state="notification",
                                 priority=priority,
                                 icon=icon,
+                                icon_path=icon_svg,
                                 title=disp_summary,
                                 subtitle=disp_body,
                                 css_class=css,

@@ -79,6 +79,12 @@ Item {
         visible: !root.isDragHovered && IslandBridge.visualState === "quickActions"
     }
 
+    // 9.1 Panel Island Preset (System Metrics & Connectivity Panel)
+    PanelIslandView {
+        id: panelIslandView
+        visible: !root.isDragHovered && IslandBridge.visualState === "panel_island"
+    }
+
     // 10. Settings & Theme View
     Settings {
         id: settingsView

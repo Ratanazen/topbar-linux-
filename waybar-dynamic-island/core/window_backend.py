@@ -14,6 +14,8 @@ import subprocess
 import threading
 from typing import Any, Callable, Dict, List, Optional
 
+from core.state_manager import resolve_app_icon_svg
+
 log = logging.getLogger("ratana-island")
 
 try:
@@ -121,9 +123,9 @@ APP_ICON_MAP = {
     "code": "󰨞",
     "vscodium": "󰨞",
     "subl": "󰨞",
-    "telegram": "󰈰",
-    "org.telegram.desktop": "󰈰",
-    "telegram-desktop": "󰈰",
+    "telegram": "󰖣",
+    "org.telegram.desktop": "󰖣",
+    "telegram-desktop": "󰖣",
     "discord": "󰙯",
     "vesktop": "󰙯",
     "webcord": "󰙯",
@@ -320,6 +322,7 @@ class SwayWindowMonitor:
                     "name": con.name or "",
                     "title": con.name or "",
                     "icon": icon,
+                    "icon_path": resolve_app_icon_svg(con.name or app_id, app_id),
                     "focused": bool(con.focused),
                     "minimized": bool(is_scratchpad),
                     "workspace": ws_name,
@@ -412,6 +415,7 @@ class SwayWindowMonitor:
                         "name": title,
                         "title": title,
                         "icon": resolve_app_icon(raw_app),
+                        "icon_path": resolve_app_icon_svg(title or raw_app, raw_app),
                         "focused": focused,
                         "minimized": is_scratch,
                         "workspace": "__i3_scratch" if is_scratch else "active",

@@ -6,6 +6,7 @@ language resolution, and app icon mapping.
 """
 
 import html
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -177,6 +178,69 @@ def resolve_app_icon(app_name: str, app_icon: str = "", summary: str = "") -> st
     return "󰂚"
 
 
+ICON_SEARCH_DIRS = [
+    os.path.expanduser("~/.local/share/icons/WhiteSur/apps/scalable"),
+    os.path.expanduser("~/.local/share/icons/WhiteSur-dark/apps/scalable"),
+    "/usr/share/icons/WhiteSur/apps/scalable",
+    "/usr/share/icons/Tela-circle-nord/scalable/apps",
+    "/usr/share/icons/candy-icons/apps/scalable",
+    "/usr/share/icons/hicolor/scalable/apps",
+    "/usr/share/icons/hicolor/512x512/apps",
+    "/usr/share/icons/hicolor/256x256/apps",
+]
+
+_ICON_CACHE: Dict[str, str] = {}
+
+
+def resolve_app_icon_svg(app_name: str, app_icon: str = "", summary: str = "") -> str:
+    """Find native Freedesktop full-color SVG or high-res PNG icon path for an application."""
+    cache_key = f"{app_name}:{app_icon}:{summary}".lower().strip()
+    if not cache_key:
+        return ""
+    if cache_key in _ICON_CACHE:
+        return _ICON_CACHE[cache_key]
+
+    raw_candidates = [c.strip() for c in [app_icon, app_name, summary] if c and c.strip()]
+    if not raw_candidates:
+        return ""
+
+    names = []
+    for cand in raw_candidates:
+        c_low = cand.lower()
+        if any(t in c_low for t in ("telegram", "tg")):
+            names.extend(["telegram", "org.telegram.desktop", "telegram-desktop"])
+        elif any(f in c_low for f in ("firefox", "mozilla")):
+            names.extend(["firefox", "org.mozilla.firefox"])
+        elif any(b in c_low for b in ("brave", "browser")):
+            names.extend(["brave-browser", "brave", "google-chrome", "chromium"])
+        elif "spotify" in c_low:
+            names.extend(["spotify", "com.spotify.Client"])
+        elif any(c in c_low for c in ("code", "vscode", "vscodium")):
+            names.extend(["code", "vscodium", "com.visualstudio.code"])
+        elif any(k in c_low for k in ("kitty", "terminal", "foot", "alacritty")):
+            names.extend(["kitty", "foot", "Alacritty", "terminal"])
+        elif any(d in c_low for d in ("discord", "vesktop", "webcord")):
+            names.extend(["discord", "vesktop", "com.discordapp.Discord"])
+        elif any(f in c_low for f in ("thunar", "dolphin", "nautilus", "files")):
+            names.extend(["system-file-manager", "thunar", "org.gnome.Nautilus"])
+
+        clean = os.path.basename(cand).replace(".desktop", "").replace(".svg", "").replace(".png", "")
+        names.extend([clean, clean.lower(), clean.replace(" ", "-").lower(), clean.replace("-", "").lower()])
+
+    for d in ICON_SEARCH_DIRS:
+        if not os.path.exists(d):
+            continue
+        for n in names:
+            for ext in (".svg", ".png"):
+                p = os.path.join(d, n + ext)
+                if os.path.exists(p):
+                    _ICON_CACHE[cache_key] = p
+                    return p
+
+    _ICON_CACHE[cache_key] = ""
+    return ""
+
+
 @dataclass
 class IslandState:
     event_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
@@ -195,6 +259,7 @@ class IslandState:
     tooltip: str = ""
     privacy_level: str = "public"
     dismissal_policy: str = "auto"
+    icon_path: str = ""
 
     # Rich payload fields for artwork, media detail, device, and system monitoring
     art_url: str = ""
@@ -205,6 +270,10 @@ class IslandState:
     device_battery: Optional[int] = None
     system_cpu: float = 0.0
     system_mem: float = 0.0
+    system_disk_used: float = 0.0
+    system_disk_total: float = 0.0
+    system_disk_pct: float = 0.0
+    system_cpu_name: str = ""
 
     # Smart Share and Window Management payload fields
     dropped_files: List[Dict[str, Any]] = field(default_factory=list)
@@ -292,6 +361,7 @@ class IslandState:
             "title": self.title,
             "subtitle": self.subtitle,
             "icon": self.icon,
+            "icon_path": getattr(self, "icon_path", "") or resolve_app_icon_svg(self.title, self.source, self.state),
             "progress_bar": self.progress_bar,
             "progress_pct": getattr(self, "progress_pct", 0.0),
             "priority": int(self.priority),
@@ -319,6 +389,10 @@ class IslandState:
             "device_battery": getattr(self, "device_battery", None),
             "system_cpu": getattr(self, "system_cpu", 0.0),
             "system_mem": getattr(self, "system_mem", 0.0),
+            "system_disk_used": getattr(self, "system_disk_used", 0.0),
+            "system_disk_total": getattr(self, "system_disk_total", 0.0),
+            "system_disk_pct": getattr(self, "system_disk_pct", 0.0),
+            "system_cpu_name": getattr(self, "system_cpu_name", ""),
             "dropped_files": getattr(self, "dropped_files", []),
             "share_targets": getattr(self, "share_targets", []),
             "running_windows": getattr(self, "running_windows", []),
@@ -361,6 +435,10 @@ class IslandState:
             "device_battery": self.device_battery,
             "system_cpu": self.system_cpu,
             "system_mem": self.system_mem,
+            "system_disk_used": self.system_disk_used,
+            "system_disk_total": self.disk_total_gb if hasattr(self, "disk_total_gb") else self.system_disk_total,
+            "system_disk_pct": self.system_disk_pct,
+            "system_cpu_name": self.system_cpu_name,
             "dropped_files": self.dropped_files,
             "share_targets": self.share_targets,
             "running_windows": self.running_windows,
