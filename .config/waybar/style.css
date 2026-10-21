@@ -1,206 +1,734 @@
+/* ============================================================
+   Ratana Top Bar — macOS-Inspired Floating Glass Stylesheet
+   Designed to precisely match reference design (V23.png)
+   ============================================================ */
+
+/* --- Reusable Design Tokens --- */
+@define-color bg-glass rgba(20, 24, 30, 0.0);
+@define-color border-glass rgba(255, 255, 255, 0.0);
+@define-color text-primary #f0f0f5;
+@define-color text-muted rgba(255, 255, 255, 0.55);
+@define-color active-pill-bg #c8c0a8;
+@define-color active-pill-fg #1a1d21;
+@define-color accent-blue #0a84ff;
+@define-color accent-cyan #5ac8fa;
+@define-color accent-green #30d158;
+@define-color accent-orange #ff9f0a;
+@define-color accent-red #ff453a;
+@define-color hover-glass rgba(255, 255, 255, 0.12);
+
+/* --- Global Settings --- */
 * {
-    border: none;
-    border-radius: 0;
-    /* `otf-font-awesome` is required to be installed for icons */
-    font-family: Liberation Mono;
-    min-height: 20px;
+  font-family: 'JetBrainsMono Nerd Font', 'Noto Sans Khmer', 'SF Pro Display', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  min-height: 0px;
+  border: none;
 }
 
+/* --- Waybar Base Container (Full Transparent Canvas) --- */
 window#waybar {
-    background: transparent;
+  background-color: transparent;
+  color: @text-primary;
 }
 
-window#waybar.hidden {
-    opacity: 0.2;
+window#waybar.empty #window {
+  background: transparent;
+  color: transparent;
 }
 
+#waybar.empty .modules-center {
+  opacity: 1;
+}
+
+/* Tooltip */
+tooltip {
+  background: rgba(18, 20, 26, 0.96);
+  border: 1px solid @border-glass;
+  border-radius: 12px;
+  color: @text-primary;
+  padding: 6px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+tooltip label {
+  color: @text-primary;
+}
+
+/* ============================================================
+   ZONE A: LEFT FLOATING CAPSULES
+   ============================================================ */
+
+/* Left Group 1: Settings & Status Capsule */
+#left1 {
+  background: transparent;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 20px;
+  box-shadow: none;
+  margin: 1px 6px;
+  padding: 0 10px;
+}
+
+#left1 #custom-omarchy {
+  color: @text-primary;
+  font-size: 13px;
+  padding: 0 4px;
+  transition: color 0.2s ease;
+}
+
+#left1 #custom-omarchy:hover {
+  color: @accent-cyan;
+}
+
+#left1 #idle_inhibitor {
+  color: @text-muted;
+  padding: 0 4px;
+}
+
+#left1 #idle_inhibitor.activated {
+  color: @accent-orange;
+}
+
+#left1 #custom-update {
+  color: @accent-green;
+  padding: 0 4px;
+  transition: color 0.2s ease;
+}
+
+#left1 #custom-update:hover {
+  color: @accent-cyan;
+}
+
+/* Left Group 2: Workspaces Capsule */
 #workspaces {
-    margin-right: 8px;
-    border-radius: 10px;
-    transition: none;
-    background: #383c4a;
+  background: transparent;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 20px;
+  box-shadow: none;
+  margin: 1px 6px;
+  padding: 2px 6px;
 }
 
 #workspaces button {
-    transition: none;
-    color: #7c818c;
-    background: transparent;
-    padding: 5px;
-    font-size: 18px;
+  padding: 0px 8px;
+  margin: 1px 2px;
+  border-radius: 20px;
+  background-color: transparent;
+  color: @text-muted;
+  min-width: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#workspaces button.persistent {
-    color: #7c818c;
-    font-size: 12px;
-}
-
-/* https://github.com/Alexays/Waybar/wiki/FAQ#the-workspace-buttons-have-a-strange-hover-effect */
 #workspaces button:hover {
-    transition: none;
-    box-shadow: inherit;
-    text-shadow: inherit;
-    border-radius: inherit;
-    color: #383c4a;
-    background: #7c818c;
+  background-color: @hover-glass;
+  color: @text-primary;
 }
 
-#workspaces button.focused {
-    color: white;
+/* Active / Focused Workspace: Rounded Pill Highlight */
+#workspaces button.focused,
+#workspaces button.active {
+  background-color: @active-pill-bg;
+  color: @active-pill-fg;
+  font-weight: 800;
+  min-width: 38px;
+  border-radius: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#language {
-    padding-left: 16px;
-    padding-right: 8px;
-    border-radius: 10px 0px 0px 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#workspaces button.urgent {
+  background-color: @accent-red;
+  color: #ffffff;
 }
 
-#keyboard-state {
-    margin-right: 8px;
-    padding-right: 16px;
-    border-radius: 0px 10px 10px 0px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+/* Zone A3: Running Applications Taskbar */
+#taskbar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
 }
 
-#custom-pacman {
-    padding-left: 16px;
-    padding-right: 8px;
-    border-radius: 10px 0px 0px 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#taskbar button {
+  background-color: transparent;
+  background: transparent;
+  border: none;
+  border-radius: 24px;
+  box-shadow: none;
+  padding: 0 8px;
+  margin: 0 3px;
+  min-height: 24px;
+  transition: all 0.2s ease;
 }
 
-#custom-mail {
-    margin-right: 8px;
-    padding-right: 16px;
-    border-radius: 0px 10px 10px 0px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#taskbar button:hover {
+  background-color: @hover-glass;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-#mode {
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#taskbar button.active {
+  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 
-#clock {
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px 0px 0px 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#taskbar button.maximized {
+  color: @accent-cyan;
 }
 
-#custom-weather {
-    padding-right: 16px;
-    border-radius: 0px 10px 10px 0px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+#taskbar button.minimized {
+  opacity: 0.6;
 }
 
-#pulseaudio {
-    margin-right: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+/* ============================================================
+   ZONE B: CENTER FLOATING WINDOW TITLE CAPSULE
+   ============================================================ */
+
+.modules-center {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 0px 4px;
+  padding: 0;
 }
 
-#pulseaudio.muted {
-    background-color: #90b1b1;
-    color: #2a5c45;
+#window {
+  color: @text-primary;
+  font-weight: 600;
+  padding: 0 4px;
 }
 
-#custom-mem {
-    margin-right: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+/* ============================================================
+   ZONE C: RIGHT FLOATING STATUS CAPSULE
+   ============================================================ */
+
+.modules-right {
+  background: transparent;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 20px;
+  box-shadow: none;
+  margin: 1px 6px;
+  padding: 0 10px;
 }
 
-#temperature {
-    margin-right: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+/* Tray Expander */
+#custom-expand-icon {
+  color: @text-muted;
+  padding: 0 4px;
 }
 
-#temperature.critical {
-    background-color: #eb4d4b;
-}
-
-#backlight {
-    margin-right: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
-}
-
-#battery {
-    margin-right: 8px;
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
-}
-
-#battery.charging {
-    color: #ffffff;
-    background-color: #26A65B;
-}
-
-#battery.warning:not(.charging) {
-    background-color: #ffbe61;
-    color: black;
-}
-
-#battery.critical:not(.charging) {
-    background-color: #f53c3c;
-    color: #ffffff;
-    animation-name: blink;
-    animation-duration: 0.5s;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-direction: alternate;
+#custom-expand-icon:hover {
+  color: @text-primary;
 }
 
 #tray {
-    padding-left: 16px;
-    padding-right: 16px;
-    border-radius: 10px;
-    transition: none;
-    color: #ffffff;
-    background: #383c4a;
+  padding: 0 4px;
 }
 
-@keyframes blink {
-    to {
-        background-color: #ffffff;
-        color: #000000;
+/* Status Icons & Text */
+#backlight,
+#custom-darkmode,
+#bluetooth,
+#pulseaudio,
+#network,
+#memory,
+#cpu,
+#custom-fan,
+#custom-theme,
+#custom-wallpaper,
+#custom-function,
+#custom-language,
+#battery,
+#custom-power-profile,
+#custom-weather,
+#language,
+#clock {
+  padding: 0 4px;
+  margin: 0 1px;
+  color: @text-primary;
+  transition: color 0.15s ease;
+}
+
+#backlight:hover,
+#custom-darkmode:hover,
+#bluetooth:hover,
+#pulseaudio:hover,
+#network:hover,
+#memory:hover,
+#cpu:hover,
+#custom-fan:hover,
+#custom-theme:hover,
+#custom-wallpaper:hover,
+#custom-function:hover,
+#custom-language:hover,
+#battery:hover,
+#custom-power-profile:hover,
+#custom-weather:hover,
+#language:hover,
+#clock:hover {
+  color: @accent-cyan;
+}
+
+#custom-fan.quiet {
+  color: @accent-green;
+}
+
+#custom-fan.balanced {
+  color: @accent-blue;
+}
+
+#custom-fan.performance {
+  color: @accent-red;
+}
+
+#custom-darkmode.dark {
+  color: @accent-blue;
+}
+
+#custom-darkmode.light {
+  color: @accent-orange;
+}
+
+#custom-theme {
+  color: #cba6f7;
+}
+
+#custom-wallpaper {
+  color: #b4befe;
+}
+
+#custom-function {
+  color: @accent-orange;
+}
+
+#custom-language {
+  color: @accent-cyan;
+  font-weight: 600;
+}
+
+#custom-language.khmer {
+  color: @accent-orange;
+}
+
+#custom-language.us {
+  color: @accent-cyan;
+}
+
+#backlight {
+  color: @accent-orange;
+}
+
+#language {
+  font-weight: 600;
+}
+
+#bluetooth.disabled,
+#bluetooth.off {
+  color: @text-muted;
+}
+
+#pulseaudio.muted {
+  color: @accent-red;
+}
+
+#network.disconnected {
+  color: @accent-red;
+}
+
+#battery.charging,
+#battery.plugged {
+  color: @accent-green;
+}
+
+#battery.warning {
+  color: @accent-orange;
+}
+
+#battery.critical {
+  color: @accent-red;
+}
+
+#custom-power-profile.performance {
+  color: @accent-orange;
+}
+
+#custom-power-profile.quiet {
+  color: @accent-cyan;
+}
+
+#custom-power-profile.balanced {
+  color: @text-primary;
+}
+
+#clock {
+  font-weight: 800;
+  padding-right: 4px;
+}
+/* =============================================================================
+ * WAYBAR DYNAMIC ISLAND — GTK3 CSS STYLESHEET
+ * =============================================================================
+ * Designed for Waybar 0.10+ with smooth transitions, Catppuccin Mocha palette,
+ * Apple-inspired translucent pill morphology, and state-specific accent rings.
+ * ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+ * 1. THEME PALETTE (Catppuccin Mocha + Apple Obsidian)
+ * ----------------------------------------------------------------------------- */
+@define-color island_bg          rgba(11, 11, 15, 0.88);
+@define-color island_bg_hover    rgba(24, 24, 37, 0.94);
+@define-color island_border      rgba(255, 255, 255, 0.12);
+@define-color island_shadow      rgba(0, 0, 0, 0.55);
+
+/* Accent Colors */
+@define-color ct_rosewater       #f5e0dc;
+@define-color ct_flamingo        #f2cdcd;
+@define-color ct_pink            #f5c2e7;
+@define-color ct_mauve           #cba6f7;
+@define-color ct_red             #f38ba8;
+@define-color ct_maroon          #eba0ac;
+@define-color ct_peach           #fab387;
+@define-color ct_yellow          #f9e2af;
+@define-color ct_green           #a6e3a1;
+@define-color ct_teal            #94e2d5;
+@define-color ct_sky             #89dceb;
+@define-color ct_sapphire        #74c7ec;
+@define-color ct_blue            #89b4fa;
+@define-color ct_lavender        #b4befe;
+@define-color ct_text            #cdd6f4;
+@define-color ct_subtext         #a6adc8;
+@define-color ct_overlay         #6c7086;
+
+/* -----------------------------------------------------------------------------
+ * 2. CORE CAPSULE CONTAINER
+ * ----------------------------------------------------------------------------- */
+#custom-island,
+#custom-island:hover,
+#custom-island.idle,
+#custom-island.media,
+#custom-island.media.paused,
+#custom-island.volume,
+#custom-island.volume.muted,
+#custom-island.brightness,
+#custom-island.notification,
+#custom-island.notif,
+#custom-island.notification.urgent,
+#custom-island.notif.urgent,
+#custom-island.timer,
+#custom-island.timer.done,
+#custom-island.charging,
+#custom-island.low-battery,
+#custom-island.recording,
+#custom-island.network,
+#custom-island.network.disconnected,
+#custom-island.clipboard,
+#custom-island.system,
+#custom-island.task,
+#custom-island.task.done,
+#custom-island.language,
+#custom-island.full,
+#custom-island.stable-width,
+#custom-island.content-width {
+    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: @ct_text;
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 0px 6px;
+    margin: 0px;
+    box-shadow: none;
+
+    /* GTK CSS transitions between states */
+    transition: min-width 280ms cubic-bezier(0.25, 0.8, 0.25, 1.0),
+                color 200ms ease,
+                padding 250ms ease;
+}
+
+/* -----------------------------------------------------------------------------
+ * 3. SUB-ELEMENT FORMATTING (PANGO SPANS)
+ * ----------------------------------------------------------------------------- */
+#custom-island .island-icon {
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+#custom-island .island-title {
+    font-weight: 700;
+}
+
+#custom-island .island-sub {
+    color: @ct_subtext;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+#custom-island .island-bar {
+    font-size: 12px;
+    letter-spacing: -1px;
+    margin-left: 6px;
+}
+
+/* -----------------------------------------------------------------------------
+ * 4. DYNAMIC ISLAND MORPHOLOGY & STATE CLASSES
+ * ----------------------------------------------------------------------------- */
+
+/* STATE 1: IDLE (Compact pill clock & date) */
+#custom-island.idle {
+    min-width: 150px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+#custom-island.idle .island-icon {
+    color: @ct_sapphire;
+}
+
+/* STATE 2: MEDIA (Purple accent, extended width for track + progress) */
+#custom-island.media {
+    min-width: 280px;
+    background: linear-gradient(135deg, rgba(17, 17, 27, 0.92), rgba(30, 30, 46, 0.92));
+    border-color: rgba(203, 166, 247, 0.40);
+    box-shadow: 0 4px 18px rgba(203, 166, 247, 0.15);
+}
+#custom-island.media .island-icon {
+    color: @ct_mauve;
+}
+#custom-island.media .island-bar {
+    color: @ct_mauve;
+}
+#custom-island.media.paused {
+    border-color: rgba(108, 112, 134, 0.35);
+    background: @island_bg;
+}
+#custom-island.media.paused .island-icon {
+    color: @ct_overlay;
+}
+
+/* STATE 3: VOLUME (Blue accent, slider pill) */
+#custom-island.volume {
+    min-width: 190px;
+    border-color: rgba(137, 180, 250, 0.45);
+    box-shadow: 0 4px 16px rgba(137, 180, 250, 0.15);
+}
+#custom-island.volume .island-icon {
+    color: @ct_blue;
+}
+#custom-island.volume .island-bar {
+    color: @ct_blue;
+}
+#custom-island.volume.muted {
+    border-color: rgba(243, 139, 168, 0.45);
+    color: @ct_red;
+}
+#custom-island.volume.muted .island-icon {
+    color: @ct_red;
+}
+
+/* STATE 4: BRIGHTNESS (Yellow accent, slider pill) */
+#custom-island.brightness {
+    min-width: 190px;
+    border-color: rgba(249, 226, 175, 0.45);
+    box-shadow: 0 4px 16px rgba(249, 226, 175, 0.15);
+}
+#custom-island.brightness .island-icon {
+    color: @ct_yellow;
+}
+#custom-island.brightness .island-bar {
+    color: @ct_yellow;
+}
+
+/* STATE 5: NOTIFICATIONS (Cyan / Blue banner, expands to fit message) */
+#custom-island.notification,
+#custom-island.notif {
+    min-width: 310px;
+    padding: 0px 20px;
+    background: linear-gradient(135deg, rgba(17, 17, 27, 0.95), rgba(24, 24, 37, 0.95));
+    border-color: rgba(116, 199, 236, 0.50);
+    box-shadow: 0 6px 20px rgba(116, 199, 236, 0.20);
+}
+#custom-island.notification .island-icon,
+#custom-island.notif .island-icon {
+    color: @ct_sky;
+}
+
+/* URGENT NOTIFICATIONS (Red Alert) */
+#custom-island.notification.urgent,
+#custom-island.notif.urgent {
+    border-color: rgba(243, 139, 168, 0.75);
+    background: linear-gradient(135deg, rgba(40, 15, 22, 0.95), rgba(30, 15, 20, 0.95));
+    box-shadow: 0 6px 24px rgba(243, 139, 168, 0.35);
+    animation: island-pulse 1.2s infinite;
+}
+#custom-island.notification.urgent .island-icon,
+#custom-island.notif.urgent .island-icon {
+    color: @ct_red;
+}
+
+/* STATE 6: TIMER & POMODORO (Green focus ring) */
+#custom-island.timer {
+    min-width: 210px;
+    border-color: rgba(166, 227, 161, 0.45);
+    box-shadow: 0 4px 16px rgba(166, 227, 161, 0.15);
+}
+#custom-island.timer .island-icon {
+    color: @ct_green;
+}
+#custom-island.timer.done {
+    border-color: rgba(250, 179, 135, 0.70);
+    animation: island-pulse 1.0s infinite;
+    color: @ct_peach;
+}
+#custom-island.timer.done .island-icon {
+    color: @ct_peach;
+}
+#custom-island.timer.stopwatch .island-icon {
+    color: @ct_teal;
+}
+
+/* STATE 7: CHARGING (Emerald green celebration pulse) */
+#custom-island.charging {
+    min-width: 210px;
+    border-color: rgba(166, 227, 161, 0.65);
+    box-shadow: 0 4px 20px rgba(166, 227, 161, 0.25);
+}
+#custom-island.charging .island-icon {
+    color: @ct_green;
+}
+
+/* STATE 8: LOW BATTERY (Critical Red) */
+#custom-island.low-battery {
+    min-width: 220px;
+    border-color: rgba(243, 139, 168, 0.75);
+    color: @ct_red;
+    animation: island-pulse 1.4s infinite;
+}
+#custom-island.low-battery .island-icon {
+    color: @ct_red;
+}
+
+/* STATE 9: RECORDING (OBS / wf-recorder Red Pill) */
+#custom-island.recording {
+    min-width: 190px;
+    background: linear-gradient(135deg, rgba(38, 12, 16, 0.95), rgba(20, 10, 12, 0.95));
+    border-color: rgba(235, 64, 52, 0.85);
+    box-shadow: 0 4px 22px rgba(235, 64, 52, 0.40);
+    animation: island-recording-pulse 1.0s infinite alternate;
+}
+#custom-island.recording .island-icon {
+    color: #ff3b30;
+}
+#custom-island.recording .island-title {
+    color: #ff453a;
+}
+
+/* STATE 10: HIDDEN (Clean transparent spacer when Quickshell overlay is active) */
+#custom-island.hidden {
+    opacity: 0;
+    min-width: 0px;
+    padding: 0px;
+    margin: 0px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* STATE 11: NETWORK (Teal accent) */
+#custom-island.network {
+    min-width: 200px;
+    border-color: rgba(148, 226, 213, 0.45);
+    box-shadow: 0 4px 16px rgba(148, 226, 213, 0.15);
+}
+#custom-island.network .island-icon {
+    color: @ct_teal;
+}
+#custom-island.network.disconnected {
+    border-color: rgba(243, 139, 168, 0.50);
+}
+#custom-island.network.disconnected .island-icon {
+    color: @ct_red;
+}
+
+/* STATE 12: CLIPBOARD (Lavender accent) */
+#custom-island.clipboard {
+    min-width: 180px;
+    border-color: rgba(180, 190, 254, 0.45);
+    box-shadow: 0 4px 16px rgba(180, 190, 254, 0.15);
+}
+#custom-island.clipboard .island-icon {
+    color: @ct_lavender;
+}
+
+/* STATE 13: SYSTEM (Peach accent) */
+#custom-island.system {
+    min-width: 200px;
+    border-color: rgba(250, 179, 135, 0.45);
+    box-shadow: 0 4px 16px rgba(250, 179, 135, 0.15);
+}
+#custom-island.system .island-icon {
+    color: @ct_peach;
+}
+
+/* STATE 14: TASK / TO-DO (Lavender Focus Pill) */
+#custom-island.task {
+    min-width: 220px;
+    border-color: rgba(180, 190, 254, 0.50);
+    box-shadow: 0 4px 18px rgba(180, 190, 254, 0.20);
+}
+#custom-island.task .island-icon {
+    color: @ct_lavender;
+}
+#custom-island.task.done {
+    border-color: rgba(166, 227, 161, 0.70);
+    box-shadow: 0 4px 20px rgba(166, 227, 161, 0.25);
+}
+#custom-island.task.done .island-icon {
+    color: @ct_green;
+}
+
+/* STATE 15: LANGUAGE / INPUT METHOD (Indigo / Blue Accent) */
+#custom-island.language {
+    min-width: 260px;
+    background: linear-gradient(135deg, rgba(9, 9, 11, 0.96), rgba(20, 24, 38, 0.96));
+    border-color: rgba(137, 180, 250, 0.55);
+    box-shadow: 0 4px 18px rgba(137, 180, 250, 0.20);
+}
+#custom-island.language .island-icon {
+    color: @ct_blue;
+}
+
+/* FULL DISPLAY MODE (Expanded Presentation) */
+#custom-island.full {
+    min-width: 380px;
+    padding: 0px 20px;
+}
+
+/* -----------------------------------------------------------------------------
+ * 5. KEYFRAME ANIMATIONS (GTK3 CSS)
+ * ----------------------------------------------------------------------------- */
+@keyframes island-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(243, 139, 168, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(243, 139, 168, 0.0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(243, 139, 168, 0.0);
+    }
+}
+
+@keyframes island-recording-pulse {
+    0% {
+        border-color: rgba(255, 59, 48, 0.4);
+        box-shadow: 0 0 4px rgba(255, 59, 48, 0.2);
+    }
+    100% {
+        border-color: rgba(255, 59, 48, 1.0);
+        box-shadow: 0 0 16px rgba(255, 59, 48, 0.6);
     }
 }
