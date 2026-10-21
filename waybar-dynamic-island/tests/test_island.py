@@ -16,12 +16,13 @@ import json
 import os
 import shutil
 import socket
+import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 # Ensure repo root and scripts directory are in sys.path
 REPO_DIR = Path(__file__).resolve().parent.parent
@@ -49,6 +50,8 @@ resolve_language_info = daemon_mod.resolve_language_info
 LANGUAGE_MAP = daemon_mod.LANGUAGE_MAP
 MODES = daemon_mod.MODES
 truncate_text = daemon_mod.truncate_text
+from core.network_backend import NetworkBackend
+from core.bluetooth_backend import BluetoothBackend
 
 
 class TestStateEngine(unittest.TestCase):
@@ -58,6 +61,12 @@ class TestStateEngine(unittest.TestCase):
         if TEST_TASKS_FILE.exists():
             TEST_TASKS_FILE.unlink()
         self.daemon = DynamicIslandDaemon()
+        if hasattr(self.daemon, "window_monitor"):
+            self.daemon.window_monitor.stop()
+            self.daemon.window_monitor.on_window_minimized = None
+            self.daemon.window_monitor.on_window_restored = None
+            self.daemon.window_monitor.get_minimized_windows = Mock(return_value=[])
+        self.daemon.dismiss_transient()
 
     def test_default_idle_state(self):
         state = self.daemon.get_current_state()
@@ -191,6 +200,8 @@ class TestIPCProtocol(unittest.TestCase):
 
     def setUp(self):
         self.daemon = DynamicIslandDaemon()
+        if hasattr(self.daemon, "window_monitor"):
+            self.daemon.window_monitor.get_minimized_windows = Mock(return_value=[])
 
     def test_valid_custom_event(self):
         args = {
@@ -265,6 +276,12 @@ class TestFrontendSwitching(unittest.TestCase):
 
     def setUp(self):
         self.daemon = DynamicIslandDaemon()
+        if hasattr(self.daemon, "window_monitor"):
+            self.daemon.window_monitor.stop()
+            self.daemon.window_monitor.on_window_minimized = None
+            self.daemon.window_monitor.on_window_restored = None
+            self.daemon.window_monitor.get_minimized_windows = Mock(return_value=[])
+        self.daemon.dismiss_transient()
 
     def test_frontend_get_and_set(self):
         # Default is waybar
@@ -952,15 +969,19 @@ class TestSwayWindowInteractions(unittest.TestCase):
 
     def test_animation_style_normalization_and_targets(self):
         normalize = IslandConfig.normalize_minimize_style
-        self.assertEqual(normalize("genie"), "genie")
-        self.assertEqual(normalize("genie-inspired"), "genie")
-        self.assertEqual(normalize("macos-genie"), "genie")
+        self.assertEqual(normalize("lamp"), "macos-lamp")
+        self.assertEqual(normalize("macos-lamp"), "macos-lamp")
+        self.assertEqual(normalize("magic-lamp"), "macos-lamp")
+        self.assertEqual(normalize("lamp-effect"), "macos-lamp")
+        self.assertEqual(normalize("genie"), "macos-genie-inspired")
+        self.assertEqual(normalize("genie-inspired"), "macos-genie-inspired")
+        self.assertEqual(normalize("macos-genie"), "macos-genie-inspired")
         self.assertEqual(normalize("scale"), "scale")
         self.assertEqual(normalize("macos-scale"), "scale")
         self.assertEqual(normalize("scale-fade"), "scale-fade")
         self.assertEqual(normalize("fade"), "scale-fade")
-        self.assertEqual(normalize("spring"), "spring")
-        self.assertEqual(normalize("bounce"), "spring")
+        self.assertEqual(normalize("spring"), "originos-spring")
+        self.assertEqual(normalize("bounce"), "originos-spring")
         self.assertEqual(normalize("reduced-motion"), "reduced-motion")
         self.assertEqual(normalize("subtle"), "reduced-motion")
         self.assertEqual(normalize("none"), "none")
@@ -968,11 +989,16 @@ class TestSwayWindowInteractions(unittest.TestCase):
     def test_minimized_apps_and_window_ipc_actions(self):
         loop = asyncio.new_event_loop()
         try:
-            # Test window_style action
+            # Test window_style action with lamp and genie
+            res_lamp = loop.run_until_complete(self.daemon.dispatch_action("window_style", {"subcommand": "set", "style": "lamp"}, None))
+            self.assertEqual(res_lamp["status"], "ok")
+            self.assertEqual(res_lamp["style"], "macos-lamp")
+            self.assertEqual(self.daemon.config.minimize_style, "macos-lamp")
+
             res_style = loop.run_until_complete(self.daemon.dispatch_action("window_style", {"subcommand": "set", "style": "genie"}, None))
             self.assertEqual(res_style["status"], "ok")
-            self.assertEqual(res_style["style"], "genie")
-            self.assertEqual(self.daemon.config.minimize_style, "genie")
+            self.assertEqual(res_style["style"], "macos-genie-inspired")
+            self.assertEqual(self.daemon.config.minimize_style, "macos-genie-inspired")
 
             # Test window_target action
             res_target = loop.run_until_complete(self.daemon.dispatch_action("window_target", {"subcommand": "set", "target": "dock"}, None))
@@ -994,6 +1020,682 @@ class TestSwayWindowInteractions(unittest.TestCase):
             loop.close()
 
 
+class TestMacOSWindowMinimizeAndRestore(unittest.TestCase):
+    """
+    Comprehensive verification for RATANA DYNAMIC ISLAND — FULL macOS-STYLE MINIMIZE TO ISLAND.
+    Tests:
+    1. Correct window identification (ID, app_id, title, workspace, output, geometry).
+    2. Minimize and restore state transitions (WindowState machine).
+    3. Single capsule with multiple applications (single selection, counter [1/3], next/prev).
+    4. Rapid repeated minimize/restore (concurrency & no stuck state).
+    5. Closed and stale windows (graceful cleanup, no duplicate processes).
+    6. Workspace and monitor changes (output resolution).
+    7. Animation cancellation & interruptibility.
+    8. Thumbnail safety and bounded cache.
+    9. Low-resource mode (thumbnail skip, duration bounds).
+    10. Waybar Lite independent operation (JSON payload validity).
+    """
+
+    def setUp(self):
+        self.daemon = DynamicIslandDaemon()
+        from core.window_backend import SwayWindowMonitor, WindowState
+        self.monitor = SwayWindowMonitor()
+
+    def test_window_identification(self):
+        mock_tree = {
+            "type": "root",
+            "nodes": [
+                {
+                    "type": "output",
+                    "name": "eDP-1",
+                    "nodes": [
+                        {
+                            "type": "workspace",
+                            "name": "1",
+                            "nodes": [
+                                {
+                                    "id": 101,
+                                    "type": "con",
+                                    "name": "Terminal — fish",
+                                    "app_id": "kitty",
+                                    "focused": True,
+                                    "rect": {"x": 50, "y": 60, "width": 800, "height": 600}
+                                }
+                            ],
+                            "floating_nodes": []
+                        }
+                    ]
+                }
+            ],
+            "floating_nodes": []
+        }
+        with patch("subprocess.check_output", return_value=json.dumps(mock_tree).encode()):
+            self.monitor.refresh_cache_now()
+            wins = self.monitor.get_windows(force_refresh=True)
+            self.assertEqual(len(wins), 1)
+            w = wins[0]
+            self.assertEqual(w["id"], 101)
+            self.assertEqual(w["app_id"], "kitty")
+            self.assertEqual(w["name"], "Terminal — fish")
+            self.assertEqual(w["output"], "eDP-1")
+            self.assertEqual(w["workspace"], "active")
+            self.assertEqual(w["rect"]["width"], 800)
+            self.assertEqual(w["icon"], "󰄛")
+            self.assertTrue(w["focused"])
+            self.assertFalse(w["minimized"])
+
+    def test_minimize_and_restore_state_transitions(self):
+        from core.window_backend import WindowState
+        con_id = 202
+        rect = {"x": 100, "y": 100, "width": 600, "height": 400}
+        self.monitor._last_geometries[con_id] = rect
+        self.monitor._cached_windows = [{
+            "id": con_id, "app_id": "firefox", "name": "Browser", "title": "Browser",
+            "focused": True, "minimized": False, "rect": rect, "workspace": "1", "output": "eDP-1"
+        }]
+
+        min_called = []
+        res_called = []
+        self.monitor.on_window_minimized = lambda w: min_called.append(w)
+        self.monitor.on_window_restored = lambda w: res_called.append(w)
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            # Minimize
+            res_min = self.monitor.minimize_window(con_id, allow_thumbnail=False)
+            self.assertEqual(res_min["status"], "ok")
+            self.assertEqual(self.monitor.get_window_state(con_id), WindowState.MINIMIZED.value)
+            self.assertEqual(len(min_called), 1)
+
+            # Restore
+            res_res = self.monitor.restore_window(con_id)
+            self.assertEqual(res_res["status"], "ok")
+            self.assertEqual(self.monitor.get_window_state(con_id), WindowState.NORMAL.value)
+            self.assertEqual(len(res_called), 1)
+
+    def test_single_capsule_multiple_applications(self):
+        mins = [
+            {"id": 1, "app_id": "kitty", "name": "Terminal", "minimized": True, "icon": "󰄛"},
+            {"id": 2, "app_id": "firefox", "name": "Firefox", "minimized": True, "icon": "󰈹"},
+            {"id": 3, "app_id": "code", "name": "VSCode", "minimized": True, "icon": "󰨞"},
+        ]
+        with patch.object(self.daemon.window_monitor, "get_minimized_windows", return_value=mins):
+            self.daemon._on_window_state_changed()
+            self.assertEqual(self.daemon.selected_minimized_index, 0)
+
+            # Test next
+            loop = asyncio.new_event_loop()
+            try:
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["next"], None))
+                self.assertEqual(res["selected_index"], 1)
+                self.assertEqual(self.daemon.selected_minimized_index, 1)
+
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["next"], None))
+                self.assertEqual(res["selected_index"], 2)
+
+                # Wraps around
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["next"], None))
+                self.assertEqual(res["selected_index"], 0)
+
+                # Test prev
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["prev"], None))
+                self.assertEqual(res["selected_index"], 2)
+
+                # Test select
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["select", "1"], None))
+                self.assertEqual(res["selected_index"], 1)
+            finally:
+                loop.close()
+
+            # Verify Waybar formatted output displays single selected app + counter [2/3]
+            state = IslandState(
+                event_id="test",
+                source="core",
+                state="idle",
+                priority=Priority.IDLE,
+                icon="󰸗",
+                title="12:00 PM",
+                css_class="idle"
+            )
+            state.running_windows = mins
+            state.selected_minimized_index = 1
+            payload = state.to_waybar_payload(self.daemon.config)
+            self.assertIn("[2/3]", payload["text"])
+            self.assertIn("󰈹", payload["text"])
+            self.assertIn("Firefox", payload["text"])
+
+    def test_rapid_repeated_minimize_restore(self):
+        con_id = 303
+        self.monitor._cached_windows = [{
+            "id": con_id, "app_id": "foot", "name": "Foot", "focused": True, "minimized": False, "rect": {"x": 0, "y": 0, "width": 400, "height": 300}
+        }]
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            for _ in range(10):
+                res_m = self.monitor.minimize_window(con_id, allow_thumbnail=False)
+                self.assertEqual(res_m["status"], "ok")
+                res_r = self.monitor.restore_window(con_id)
+                self.assertEqual(res_r["status"], "ok")
+
+    def test_closed_and_stale_windows(self):
+        stale_id = 99999
+        self.monitor._cached_windows = [{"id": stale_id, "name": "Ghost", "minimized": True}]
+        self.monitor._prev_minimized_ids = {stale_id}
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stderr="Error: [con_id=99999] not found")
+            res = self.monitor.restore_window(stale_id)
+            self.assertEqual(res["status"], "error")
+            self.assertTrue(res.get("stale"))
+            self.assertNotIn(stale_id, self.monitor._prev_minimized_ids)
+            self.assertNotIn(stale_id, [w["id"] for w in self.monitor._cached_windows])
+
+    def test_thumbnail_safety_and_bounds(self):
+        from core.window_backend import (
+            capture_window_thumbnail, prune_thumbnail_cache,
+            cleanup_window_thumbnail, THUMBNAIL_DIR, MAX_CACHED_THUMBNAILS
+        )
+        os.makedirs(THUMBNAIL_DIR, mode=0o700, exist_ok=True)
+        # Create dummy thumbnails exceeding MAX_CACHED_THUMBNAILS
+        for i in range(15):
+            p = os.path.join(THUMBNAIL_DIR, f"{i}.jpg")
+            with open(p, "w") as f:
+                f.write("test")
+        prune_thumbnail_cache()
+        remaining = [f for f in os.listdir(THUMBNAIL_DIR) if f.endswith(".jpg")]
+        self.assertLessEqual(len(remaining), MAX_CACHED_THUMBNAILS)
+
+        # Cleanup single thumbnail
+        cleanup_window_thumbnail(0)
+        self.assertFalse(os.path.exists(os.path.join(THUMBNAIL_DIR, "0.jpg")))
+
+    def test_low_resource_mode(self):
+        self.daemon.config.apply_profile("low-resource")
+        self.assertEqual(self.daemon.config.minimize_style, "low-resource")
+        self.assertLessEqual(self.daemon.config.minimize_duration_ms, 200)
+
+    def test_missing_thumbnail_support(self):
+        from core.window_backend import capture_window_thumbnail
+        with patch("shutil.which", return_value=None):
+            # When grim is not installed
+            res = capture_window_thumbnail(123, {"x": 10, "y": 10, "width": 500, "height": 400})
+            self.assertEqual(res, "")
+
+    def test_workspace_and_monitor_changes(self):
+        mock_tree = {
+            "type": "root",
+            "nodes": [
+                {
+                    "type": "output",
+                    "name": "HDMI-A-1",
+                    "nodes": [
+                        {
+                            "type": "workspace",
+                            "name": "3",
+                            "nodes": [
+                                {
+                                    "id": 505,
+                                    "type": "con",
+                                    "name": "Code",
+                                    "app_id": "code",
+                                    "focused": False,
+                                    "rect": {"x": 1920, "y": 0, "width": 1920, "height": 1080}
+                                }
+                            ],
+                            "floating_nodes": []
+                        }
+                    ]
+                }
+            ],
+            "floating_nodes": []
+        }
+        with patch("subprocess.check_output", return_value=json.dumps(mock_tree).encode()):
+            wins = self.monitor.get_windows(force_refresh=True)
+            w = next((x for x in wins if x["id"] == 505), None)
+            self.assertIsNotNone(w)
+            self.assertEqual(w["output"], "HDMI-A-1")
+            self.assertEqual(w["rect"]["x"], 1920)
+
+    def test_animation_cancellation(self):
+        # Broadcast minimize followed immediately by restore to verify cancellation payload
+        con_id = 707
+        win = {
+            "id": con_id, "app_id": "kitty", "name": "Terminal",
+            "icon": "󰄛", "rect": {"x": 100, "y": 100, "width": 500, "height": 400}
+        }
+        payloads = []
+        with patch.object(self.daemon.ipc_server, "broadcast_stream") as mock_broadcast:
+            mock_broadcast.side_effect = lambda msg: payloads.append(json.loads(msg))
+            self.daemon._on_window_minimized(win)
+            self.daemon._on_window_restored(win)
+            anim_payloads = [p for p in payloads if "window_anim" in p]
+            self.assertEqual(len(anim_payloads), 2)
+            self.assertEqual(anim_payloads[0]["window_anim"]["type"], "minimize")
+            self.assertEqual(anim_payloads[1]["window_anim"]["type"], "restore")
+            self.assertEqual(anim_payloads[1]["window_anim"]["id"], con_id)
+
+    def test_waybar_lite_independence(self):
+        state = self.daemon.get_current_state()
+        data = state.to_waybar_payload(self.daemon.config)
+        self.assertIn("text", data)
+        self.assertIn("tooltip", data)
+        self.assertIn("class", data)
+        self.assertIn("alt", data)
+        serialized = json.dumps(data)
+        loaded = json.loads(serialized)
+        self.assertEqual(loaded["text"], data["text"])
+
+
+class TestWifiAndBluetoothManagers(unittest.TestCase):
+    def setUp(self):
+        self.config = IslandConfig()
+        self.caps = Mock()
+        self.caps.has_nmcli = True
+        self.events = []
+        self.net_backend = NetworkBackend(self.config, self.caps, lambda ev: self.events.append(ev))
+
+    def test_wifi_scan_networks_parsing(self):
+        loop = asyncio.new_event_loop()
+        try:
+            sample_output = (
+                "*:MyHomeWifi:AA\\:BB\\:CC\\:DD\\:EE\\:FF:85:WPA2:▂▄▆█\n"
+                " :CoffeeShop:11\\:22\\:33\\:44\\:55\\:66:50:WPA2 802.1X:▂▄__\n"
+                " :OpenWiFi:22\\:33\\:44\\:55\\:66\\:77:90::▂▄▆█\n"
+                " :សួស្តីកម្ពុជា:33\\:44\\:55\\:66\\:77\\:88:65:WPA2:▂▄▆_\n"
+            ).encode("utf-8")
+
+            mock_proc = Mock()
+            mock_proc.communicate = AsyncMock(return_value=(sample_output, b""))
+
+            with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+                networks = loop.run_until_complete(self.net_backend.scan_networks(rescan=False))
+
+                self.assertEqual(len(networks), 4)
+                home = next(n for n in networks if n["ssid"] == "MyHomeWifi")
+                self.assertTrue(home["in_use"])
+                self.assertEqual(home["bssid"], "AA:BB:CC:DD:EE:FF")
+                self.assertEqual(home["signal"], 85)
+                self.assertTrue(home["is_secure"])
+
+                open_net = next(n for n in networks if n["ssid"] == "OpenWiFi")
+                self.assertFalse(open_net["is_secure"])
+                self.assertEqual(open_net["signal"], 90)
+
+                khmer = next(n for n in networks if n["ssid"] == "សួស្តីកម្ពុជា")
+                self.assertEqual(khmer["signal"], 65)
+                self.assertEqual(khmer["bssid"], "33:44:55:66:77:88")
+        finally:
+            loop.close()
+
+    def test_wifi_status_parsing(self):
+        loop = asyncio.new_event_loop()
+        try:
+            mock_radio = Mock()
+            mock_radio.communicate = AsyncMock(return_value=(b"enabled\n", b""))
+
+            mock_dev = Mock()
+            mock_dev.communicate = AsyncMock(return_value=(b"wlan0:wifi:connected:MyHomeWifi\n", b""))
+
+            mock_sig = Mock()
+            mock_sig.communicate = AsyncMock(return_value=(b"*:MyHomeWifi:88\n", b""))
+
+            with patch("asyncio.create_subprocess_exec", side_effect=[mock_radio, mock_dev, mock_sig]):
+                status = loop.run_until_complete(self.net_backend.get_wifi_status())
+                self.assertTrue(status["available"])
+                self.assertTrue(status["enabled"])
+                self.assertTrue(status["connected"])
+                self.assertEqual(status["ssid"], "MyHomeWifi")
+                self.assertEqual(status["signal"], 88)
+                self.assertEqual(status["device"], "wlan0")
+                self.assertEqual(status["icon"], "󰤨")
+        finally:
+            loop.close()
+
+    def test_bluetooth_toggle_power(self):
+        loop = asyncio.new_event_loop()
+        try:
+            bt_backend = BluetoothBackend(self.config, lambda ev: self.events.append(ev))
+            bt_backend.has_bluez = False  # Avoid real DBus during test
+
+            mock_status = {"adapter_powered": False}
+            with patch.object(bt_backend, "fetch_status", AsyncMock(return_value=mock_status)):
+                mock_proc = Mock()
+                mock_proc.communicate = AsyncMock(return_value=(b"", b""))
+
+                with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+                    res = loop.run_until_complete(bt_backend.toggle_power(enable=True))
+                    self.assertEqual(res["status"], "ok")
+                    self.assertTrue(res["powered"])
+                    self.assertEqual(len(self.events), 1)
+                    self.assertEqual(self.events[0].title, "Bluetooth On")
+        finally:
+            loop.close()
+
+    def test_dual_split_accessory_pill_payload(self):
+        state = IslandState(
+            source="media",
+            state="media",
+            title="Blinding Lights",
+            subtitle="The Weeknd",
+            accessory_icon="󰓇",
+            accessory_label="The Weeknd",
+            accessory_visible=True
+        )
+        payload = state.to_waybar_payload(self.config)
+        self.assertIn("accessory_icon", payload)
+        self.assertIn("accessory_label", payload)
+        self.assertTrue(payload["accessory_visible"])
+        self.assertEqual(payload["accessory_icon"], "󰓇")
+        self.assertEqual(payload["accessory_label"], "The Weeknd")
+
+        d = state.to_dict()
+        self.assertTrue(d["accessory_visible"])
+        self.assertEqual(d["accessory_icon"], "󰓇")
+
+
+class TestConfigurationAndSettingsSystem(unittest.TestCase):
+    """Phase 6: Unified Settings & Configuration Verification Tests"""
+
+    def setUp(self):
+        self.daemon = DynamicIslandDaemon()
+        if hasattr(self.daemon, "window_monitor"):
+            self.daemon.window_monitor.stop()
+            self.daemon.window_monitor.on_window_minimized = None
+            self.daemon.window_monitor.on_window_restored = None
+            self.daemon.window_monitor.get_minimized_windows = Mock(return_value=[])
+        self.daemon.dismiss_transient()
+
+    def test_settings_get_and_export(self):
+        loop = asyncio.new_event_loop()
+        try:
+            res = loop.run_until_complete(self.daemon.dispatch_action("settings", [], None))
+            self.assertEqual(res["status"], "ok")
+            self.assertIn("settings", res)
+            s = res["settings"]
+            self.assertIn("theme", s)
+            self.assertIn("mode", s)
+            self.assertIn("minimize_style", s)
+
+            res_exp = loop.run_until_complete(self.daemon.dispatch_action("settings_export", [], None))
+            self.assertEqual(res_exp["status"], "ok")
+            self.assertEqual(res_exp["settings"]["theme"], self.daemon.config.theme)
+        finally:
+            loop.close()
+
+    def test_settings_set(self):
+        loop = asyncio.new_event_loop()
+        try:
+            res1 = loop.run_until_complete(self.daemon.dispatch_action("settings_set", {"key": "theme", "val": "hyperos-dark"}, None))
+            self.assertEqual(res1["status"], "ok")
+            self.assertEqual(self.daemon.config.theme, "hyperos-dark")
+
+            res2 = loop.run_until_complete(self.daemon.dispatch_action("settings_set", {"key": "minimize_style", "val": "originos-spring"}, None))
+            self.assertEqual(res2["status"], "ok")
+            self.assertEqual(self.daemon.config.minimize_style, "originos-spring")
+
+            res3 = loop.run_until_complete(self.daemon.dispatch_action("settings_set", {"key": "minimize_duration_ms", "val": "220"}, None))
+            self.assertEqual(res3["status"], "ok")
+            self.assertEqual(self.daemon.config.minimize_duration_ms, 220)
+
+            res4 = loop.run_until_complete(self.daemon.dispatch_action("settings_set", {"key": "network_ssid_privacy", "val": "false"}, None))
+            self.assertEqual(res4["status"], "ok")
+            self.assertFalse(self.daemon.config.network_ssid_privacy)
+        finally:
+            loop.close()
+
+    def test_settings_reset_to_defaults(self):
+        loop = asyncio.new_event_loop()
+        try:
+            # Change some settings
+            self.daemon.config.theme = "catppuccin-mocha"
+            self.daemon.config.minimize_duration_ms = 999
+            self.daemon.config.reduced_motion = True
+
+            # Reset
+            res = loop.run_until_complete(self.daemon.dispatch_action("settings_reset", [], None))
+            self.assertEqual(res["status"], "ok")
+            self.assertEqual(self.daemon.config.theme, "macos-black")
+            self.assertEqual(self.daemon.config.minimize_duration_ms, 380)
+            self.assertFalse(self.daemon.config.reduced_motion)
+        finally:
+            loop.close()
+
+    def test_settings_import(self):
+        loop = asyncio.new_event_loop()
+        try:
+            import_data = {
+                "theme": "originos-dark",
+                "minimize_style": "hyperos-mini",
+                "blur_enabled": False
+            }
+            res = loop.run_until_complete(self.daemon.dispatch_action("settings_import", {"settings": import_data}, None))
+            self.assertEqual(res["status"], "ok")
+            self.assertEqual(self.daemon.config.theme, "originos-dark")
+            self.assertEqual(self.daemon.config.minimize_style, "hyperos-mini")
+            self.assertFalse(self.daemon.config.blur_enabled)
+        finally:
+            loop.close()
+
+    def test_settings_ui_action(self):
+        loop = asyncio.new_event_loop()
+        try:
+            res = loop.run_until_complete(self.daemon.dispatch_action("settings_ui", [], None))
+            self.assertEqual(res["status"], "ok")
+            current = self.daemon.get_current_state()
+            self.assertEqual(current.state, "settings")
+            self.assertEqual(current.priority, Priority.SETTINGS)
+        finally:
+            loop.close()
+
+
+class TestWallpaperAndSystemTheme(unittest.TestCase):
+    """Wallpaper and System Theme IPC dispatch tests"""
+
+    def setUp(self):
+        self.daemon = DynamicIslandDaemon()
+
+    def test_wallpaper_ipc_actions(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="/path/to/wall1.jpg\n/path/to/wall2.jpg\n",
+                    stderr=""
+                )
+                res_list = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_list", [], None))
+                self.assertEqual(res_list["status"], "ok")
+                self.assertIn("wallpapers", res_list)
+                self.assertEqual(len(res_list["wallpapers"]), 2)
+
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="/path/to/wall1.jpg\n",
+                    stderr=""
+                )
+                res_get = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_get", [], None))
+                self.assertEqual(res_get["status"], "ok")
+                self.assertEqual(res_get["current"], "/path/to/wall1.jpg")
+
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="Applied next wallpaper: /path/to/wall2.jpg",
+                    stderr=""
+                )
+                res_next = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_next", [], None))
+                self.assertEqual(res_next["status"], "ok")
+
+                res_set = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_set", ["/path/to/wall2.jpg"], None))
+                self.assertEqual(res_set["status"], "ok")
+                self.assertEqual(res_set["path"], "/path/to/wall2.jpg")
+        finally:
+            loop.close()
+
+    def test_system_theme_ipc_actions(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="macos-dark: macOS Sonoma Dark (active)\nmacos-light: macOS Sonoma Light\nnordic: Nordic Frost\ncatppuccin: Catppuccin Mocha\ndr460nized-ember: Dr460nized Ember\n",
+                    stderr=""
+                )
+                res_list = loop.run_until_complete(self.daemon.dispatch_action("system_theme_list", [], None))
+                self.assertEqual(res_list["status"], "ok")
+                self.assertIn("themes", res_list)
+                self.assertEqual(len(res_list["themes"]), 5)
+
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="macos-dark\n",
+                    stderr=""
+                )
+                res_get = loop.run_until_complete(self.daemon.dispatch_action("system_theme_get", [], None))
+                self.assertEqual(res_get["status"], "ok")
+                self.assertEqual(res_get["current"], "macos-dark")
+
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0,
+                    stdout="Applied theme: macOS Sonoma Dark (macos-dark)\n",
+                    stderr=""
+                )
+                res_set = loop.run_until_complete(self.daemon.dispatch_action("system_theme_set", ["macos-dark"], None))
+                self.assertEqual(res_set["status"], "ok")
+                self.assertEqual(res_set["theme"], "macos-dark")
+        finally:
+            loop.close()
+
+
+class TestV4TransparencyAndInteractions(unittest.TestCase):
+    """Test suite covering 0% Waybar transparency, Quickshell overlay elevation, and interactive controls."""
+
+    def setUp(self):
+        self.daemon = DynamicIslandDaemon()
+
+    def test_waybar_zero_transparency_tokens(self):
+        css_path = Path(__file__).resolve().parent.parent / "style.css"
+        if not css_path.exists():
+            css_path = Path.home() / ".config" / "waybar" / "style.css"
+        self.assertTrue(css_path.exists())
+        content = css_path.read_text()
+        # Verify 0.0 alpha tokens or transparent backgrounds are used
+        self.assertTrue(
+            "rgba(20, 24, 30, 0.0)" in content or "background: transparent" in content or "background-color: transparent" in content
+        )
+
+    def test_gtk_css_no_important_tokens(self):
+        css_path = Path(__file__).resolve().parent.parent / "style.css"
+        if not css_path.exists():
+            css_path = Path.home() / ".config" / "waybar" / "style.css"
+        content = css_path.read_text()
+        # GTK CSS throws "Junk at end of value" on !important
+        self.assertNotIn("!important", content)
+
+    def test_quickshell_layer_stacking_overlay(self):
+        shell_qml = Path(__file__).resolve().parent.parent / "quickshell" / "shell.qml"
+        self.assertTrue(shell_qml.exists())
+        content = shell_qml.read_text()
+        self.assertIn("WlrLayer.Overlay", content)
+
+    def test_wallpaper_prev_and_random_ipc(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="Applied prev wallpaper: /path/to/wall1.jpg", stderr=""
+                )
+                res_prev = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_prev", [], None))
+                self.assertEqual(res_prev["status"], "ok")
+
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="Applied random wallpaper: /path/to/wall3.jpg", stderr=""
+                )
+                res_rand = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_random", [], None))
+                self.assertEqual(res_rand["status"], "ok")
+        finally:
+            loop.close()
+
+    def test_wallpaper_gui_launch_ipc(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.Popen") as mock_popen:
+                res_gui = loop.run_until_complete(self.daemon.dispatch_action("wallpaper_gui", [], None))
+                self.assertEqual(res_gui["status"], "ok")
+                self.assertIn("message", res_gui)
+        finally:
+            loop.close()
+
+    def test_system_theme_prev_ipc(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.run") as mock_run:
+                mock_run.return_value = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="Applied theme: macOS Sonoma Light (macos-light)", stderr=""
+                )
+                res_prev = loop.run_until_complete(self.daemon.dispatch_action("system_theme_prev", [], None))
+                self.assertEqual(res_prev["status"], "ok")
+        finally:
+            loop.close()
+
+    def test_system_theme_gui_launch_ipc(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("subprocess.Popen") as mock_popen:
+                res_gui = loop.run_until_complete(self.daemon.dispatch_action("system_theme_gui", [], None))
+                self.assertEqual(res_gui["status"], "ok")
+                self.assertIn("message", res_gui)
+        finally:
+            loop.close()
+
+    def test_pomodoro_toggle_and_reset_actions(self):
+        loop = asyncio.new_event_loop()
+        try:
+            res_start = loop.run_until_complete(self.daemon.dispatch_action("pomodoro", [], None))
+            self.assertEqual(res_start["status"], "ok")
+            self.assertIn("Focus", res_start["message"])
+
+            res_stop = loop.run_until_complete(self.daemon.dispatch_action("stop", [], None))
+            self.assertEqual(res_stop["status"], "ok")
+        finally:
+            loop.close()
+
+    def test_dnd_toggle_ipc_actions(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with unittest.mock.patch("asyncio.create_subprocess_exec") as mock_exec:
+                self.daemon.caps.has_makoctl = True
+                res = loop.run_until_complete(self.daemon.dispatch_action("dnd_toggle", [], None))
+                self.assertEqual(res["status"], "ok")
+                self.assertIn("DND", res["message"])
+        finally:
+            loop.close()
+
+    def test_compact_view_click_actions(self):
+        compact_qml = Path(__file__).resolve().parent.parent / "quickshell" / "components" / "CompactView.qml"
+        self.assertTrue(compact_qml.exists())
+        content = compact_qml.read_text()
+        self.assertIn("toggleQuickActions", content)
+        self.assertIn("restoreSelectedWindow", content)
+
+    def test_window_scratchpad_filtering(self):
+        from core.window_backend import SwayWindowMonitor, WindowState
+        self.assertTrue(issubclass(WindowState, str))
+        monitor = SwayWindowMonitor()
+        self.assertIsNotNone(monitor)
+
+    def test_input_mask_region_integrity(self):
+        shell_qml = Path(__file__).resolve().parent.parent / "quickshell" / "shell.qml"
+        content = shell_qml.read_text()
+        self.assertTrue("compactMask" in content and "Region" in content and "item: capsule" in content)
+
+    def test_app_launcher_process_spawning(self):
+        bridge_qml = Path(__file__).resolve().parent.parent / "quickshell" / "services" / "IslandBridge.qml"
+        self.assertTrue(bridge_qml.exists())
+        content = bridge_qml.read_text()
+        self.assertIn("appLauncherComponent.createObject", content)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

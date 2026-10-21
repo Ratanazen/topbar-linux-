@@ -31,10 +31,16 @@ Item {
         visible: !root.isDragHovered && (IslandBridge.visualState === "mediaCompact" || IslandBridge.visualState === "mediaExpanded" || IslandBridge.visualState === "media")
     }
 
-    // 3. Bluetooth View
+    // 3. Bluetooth View (Notification or Interactive Manager)
     BluetoothView {
         id: bluetoothView
-        visible: !root.isDragHovered && IslandBridge.visualState === "bluetooth"
+        visible: !root.isDragHovered && (IslandBridge.visualState === "bluetooth" || IslandBridge.visualState === "bluetooth_manager")
+    }
+
+    // 3.1 Wi-Fi Interactive Manager View
+    WifiView {
+        id: wifiView
+        visible: !root.isDragHovered && IslandBridge.visualState === "wifi_manager"
     }
 
     // 4. Volume View

@@ -210,10 +210,17 @@ class IslandState:
     dropped_files: List[Dict[str, Any]] = field(default_factory=list)
     share_targets: List[Dict[str, Any]] = field(default_factory=list)
     running_windows: List[Dict[str, Any]] = field(default_factory=list)
+    selected_minimized_index: int = 0
 
     # State Machine & Animation tracking
     previous_state: Optional[str] = None
     anim_key: str = ""
+    animation_token: str = ""
+
+    # Apple-style Dual Split Accessory Pill
+    accessory_icon: str = ""
+    accessory_label: str = ""
+    accessory_visible: bool = False
 
     @property
     def is_expired(self) -> bool:
@@ -228,8 +235,28 @@ class IslandState:
         subtitle_esc = html.escape(self.subtitle) if self.subtitle else ""
         bar_esc = html.escape(self.progress_bar) if self.progress_bar else ""
 
+        # Resolve minimized windows, focused window, and single selected minimized app
+        running = getattr(self, "running_windows", [])
+        minimized = [w for w in running if w.get("minimized")]
+        focused = next((w for w in running if w.get("focused")), None)
+        sel_idx = getattr(self, "selected_minimized_index", 0)
+        sel_win = None
+        if minimized:
+            sel_idx = max(0, min(sel_idx, len(minimized) - 1))
+            sel_win = minimized[sel_idx]
+
         if self.css_class.startswith("idle"):
             formatted_text = f"{icon_esc}  {title_esc}"
+            if minimized and sel_win:
+                win_icon_esc = html.escape(sel_win.get("icon") or "󰖲")
+                win_name_esc = html.escape(sel_win.get("name") or sel_win.get("title") or "Window")
+                counter_esc = f"[{sel_idx + 1}/{len(minimized)}]"
+                formatted_text = f"{formatted_text}  •  {win_icon_esc} {win_name_esc} <span alpha='70%'>{counter_esc}</span>"
+        elif self.state == "minimized_apps" and minimized and sel_win:
+            win_icon_esc = html.escape(sel_win.get("icon") or "󰖲")
+            win_name_esc = html.escape(sel_win.get("name") or sel_win.get("title") or "Window")
+            counter_esc = f"[{sel_idx + 1}/{len(minimized)}]"
+            formatted_text = f"{win_icon_esc}  <b>{win_name_esc}</b>  <span alpha='70%'>{counter_esc}</span>"
         elif self.progress_bar and subtitle_esc:
             formatted_text = f"{icon_esc}  <b>{title_esc}</b>  <span>{bar_esc}</span>  <span alpha='70%'>{subtitle_esc}</span>"
         elif self.progress_bar:
@@ -290,8 +317,16 @@ class IslandState:
             "dropped_files": getattr(self, "dropped_files", []),
             "share_targets": getattr(self, "share_targets", []),
             "running_windows": getattr(self, "running_windows", []),
+            "minimized_windows": minimized,
+            "focused_window": focused,
+            "selected_minimized_index": sel_idx,
+            "selected_minimized_window": sel_win,
+            "total_minimized": len(minimized),
             "previous_state": getattr(self, "previous_state", None),
             "anim_key": getattr(self, "anim_key", ""),
+            "accessory_icon": getattr(self, "accessory_icon", ""),
+            "accessory_label": getattr(self, "accessory_label", ""),
+            "accessory_visible": bool(getattr(self, "accessory_visible", False)),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -324,4 +359,7 @@ class IslandState:
             "running_windows": self.running_windows,
             "previous_state": self.previous_state,
             "animation_token": self.animation_token,
+            "accessory_icon": self.accessory_icon,
+            "accessory_label": self.accessory_label,
+            "accessory_visible": self.accessory_visible,
         }

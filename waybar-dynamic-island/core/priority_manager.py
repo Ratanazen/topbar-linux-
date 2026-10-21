@@ -24,6 +24,7 @@ class Priority(IntEnum):
     LANGUAGE = 55                           # Input Language / Keyboard Layout
     WINDOW_MINIMIZE = 58                    # macOS-style window minimize/restore feedback
     SLIDER = 60                             # Volume, Brightness
+    SETTINGS = 65                           # Quick settings, Wi-Fi & Bluetooth managers
     NOTIFICATION = 68                       # Standard Notification
     BLUETOOTH_CONNECTING = 72               # Bluetooth connecting / connection failure
     SHARE = 75                              # Drag-and-drop Smart Share
@@ -59,7 +60,10 @@ VALID_STATES: Set[str] = {
     "pomodoro",
     "quick_actions",
     "quick-actions",
+    "quickActions",
     "quick_settings",
+    "wifi_manager",
+    "bluetooth_manager",
     "settings",
     "error",
     # Smart Share States
@@ -91,9 +95,9 @@ VALID_STATES: Set[str] = {
 
 # Graph of permissible state transitions
 VALID_TRANSITIONS = {
-    "idle": {"compact", "expanded", "hover", "media", "mediaCompact", "media_expanded", "volume", "brightness", "bluetooth", "network", "battery", "battery_warning", "recording", "notification", "timer", "pomodoro", "drag_enter", "drag_active", "minimize_detected", "minimize_animating", "minimized_apps", "restore_detected", "restore_animating", "quick_settings", "quick_actions", "settings", "task", "language", "clipboard", "system", "error"},
-    "compact": {"idle", "expanded", "hover", "media", "volume", "brightness", "drag_enter", "drag_active", "minimize_detected", "minimize_animating", "minimized_apps", "restore_detected", "restore_animating", "quick_settings", "quick_actions", "notification", "error"},
-    "expanded": {"idle", "compact", "media_expanded", "minimized_apps", "quick_settings", "quick_actions", "settings", "notification", "error"},
+    "idle": {"compact", "expanded", "hover", "media", "mediaCompact", "media_expanded", "volume", "brightness", "bluetooth", "network", "battery", "battery_warning", "recording", "notification", "timer", "pomodoro", "drag_enter", "drag_active", "minimize_detected", "minimize_animating", "minimized_apps", "restore_detected", "restore_animating", "quick_settings", "quick_actions", "quickActions", "wifi_manager", "bluetooth_manager", "settings", "task", "language", "clipboard", "system", "error"},
+    "compact": {"idle", "expanded", "hover", "media", "volume", "brightness", "drag_enter", "drag_active", "minimize_detected", "minimize_animating", "minimized_apps", "restore_detected", "restore_animating", "quick_settings", "quick_actions", "quickActions", "wifi_manager", "bluetooth_manager", "notification", "error"},
+    "expanded": {"idle", "compact", "media_expanded", "minimized_apps", "quick_settings", "quick_actions", "quickActions", "wifi_manager", "bluetooth_manager", "settings", "notification", "error"},
     "minimize_detected": {"minimize_animating", "minimized_apps", "idle", "compact", "error"},
     "minimize_animating": {"minimized_apps", "idle", "compact", "error"},
     "minimized_apps": {"restore_detected", "restore_animating", "idle", "compact", "expanded", "error"},

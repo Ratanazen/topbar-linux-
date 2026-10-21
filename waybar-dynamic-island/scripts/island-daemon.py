@@ -172,6 +172,7 @@ class DynamicIslandDaemon:
         self.share_manager = ShareManager(self.bluetooth_backend)
         self.active_dropped_files: List[Dict[str, Any]] = []
         self.active_share_targets: List[Dict[str, Any]] = []
+        self.selected_minimized_index: int = 0
         self.window_monitor = SwayWindowMonitor(
             on_window_change=self._on_window_state_changed,
             on_window_minimized=self._on_window_minimized,
@@ -204,6 +205,11 @@ class DynamicIslandDaemon:
         self.render_and_broadcast()
 
     def _on_window_state_changed(self):
+        mins = self.window_monitor.get_minimized_windows()
+        if mins:
+            self.selected_minimized_index = max(0, min(self.selected_minimized_index, len(mins) - 1))
+        else:
+            self.selected_minimized_index = 0
         self.render_and_broadcast()
 
     def _on_window_minimized(self, win_info: Dict[str, Any]):
@@ -211,6 +217,11 @@ class DynamicIslandDaemon:
         icon = win_info.get("icon", "󰖰")
         rect = win_info.get("rect", {})
         con_id = win_info.get("id", 0)
+
+        # Point selection to the newly minimized window
+        mins = self.window_monitor.get_minimized_windows()
+        found_idx = next((i for i, w in enumerate(mins) if w["id"] == con_id), len(mins) - 1)
+        self.selected_minimized_index = max(0, found_idx)
 
         feedback = IslandState(
             event_id="window-min",
@@ -232,7 +243,8 @@ class DynamicIslandDaemon:
             "title": title,
             "icon": icon,
             "rect": rect,
-            "style": getattr(self.config, "minimize_style", "macos-scale"),
+            "thumbnail": win_info.get("thumbnail", ""),
+            "style": getattr(self.config, "minimize_style", "macos-genie-inspired"),
             "target": getattr(self.config, "minimize_target", "island"),
             "duration": getattr(self.config, "minimize_duration_ms", 380),
         }
@@ -243,6 +255,12 @@ class DynamicIslandDaemon:
         icon = win_info.get("icon", "󰖯")
         rect = win_info.get("rect", {})
         con_id = win_info.get("id", 0)
+
+        mins = self.window_monitor.get_minimized_windows()
+        if mins:
+            self.selected_minimized_index = max(0, min(self.selected_minimized_index, len(mins) - 1))
+        else:
+            self.selected_minimized_index = 0
 
         feedback = IslandState(
             event_id="window-res",
@@ -264,7 +282,8 @@ class DynamicIslandDaemon:
             "title": title,
             "icon": icon,
             "rect": rect,
-            "style": getattr(self.config, "minimize_style", "macos-scale"),
+            "thumbnail": win_info.get("thumbnail", ""),
+            "style": getattr(self.config, "minimize_style", "macos-genie-inspired"),
             "target": getattr(self.config, "minimize_target", "island"),
             "duration": getattr(self.config, "minimize_duration_ms", 380),
         }
@@ -370,12 +389,18 @@ class DynamicIslandDaemon:
             elif self.config.language_format == "short":
                 lan_str = lan_info["short"]
             else:  # 'both'
-                lan_str = f"{lan_info['origin']} ({lan_info['short']})"
+                if lan_info["origin"].lower() in lan_info["full"].lower() or lan_info["origin"] == lan_info["full"]:
+                    lan_str = lan_info["full"]
+                else:
+                    lan_str = f"{lan_info['origin']} ({lan_info['short']})"
             idle_title = f"{idle_title}  •  {lan_info['flag']} {lan_str}"
 
         if self.config.show_full:
             full_date = now_dt.strftime("%A, %d %B %Y")
-            full_lan = f"{lan_info['origin']} ({lan_info['full']})"
+            if lan_info["origin"].lower() in lan_info["full"].lower():
+                full_lan = lan_info["full"]
+            else:
+                full_lan = f"{lan_info['origin']} ({lan_info['full']})"
             idle_title = f"{now_dt.strftime('%H:%M:%S')}  {full_date}  •  {lan_info['flag']} {full_lan}"
 
         tooltip = (
@@ -402,6 +427,28 @@ class DynamicIslandDaemon:
         winner.dropped_files = getattr(self, "active_dropped_files", [])
         winner.share_targets = getattr(self, "active_share_targets", [])
         winner.running_windows = self.window_monitor.get_windows()
+        winner.selected_minimized_index = self.selected_minimized_index
+
+        # Determine secondary accessory state for dual-split capsule (Apple Dynamic Island accessory pill)
+        mins = self.window_monitor.get_minimized_windows()
+        bt_connected = list(self.bluetooth_backend.connected_devices.values()) if hasattr(self, "bluetooth_backend") and self.bluetooth_backend else []
+        has_media = any(p and getattr(p, "source", "") == "media" for p in persistent) if persistent else False
+
+        if winner.source == "media" and mins:
+            sel_idx = max(0, min(self.selected_minimized_index, len(mins) - 1))
+            winner.accessory_icon = mins[sel_idx].get("icon", "󰖲")
+            winner.accessory_label = mins[sel_idx].get("app_id", "")[:6]
+            winner.accessory_visible = True
+        elif mins and has_media:
+            winner.accessory_icon = "󰎆"
+            winner.accessory_label = "Music"
+            winner.accessory_visible = True
+        elif bt_connected and winner.state in ("idle", "clock"):
+            dev = bt_connected[0]
+            winner.accessory_icon = "󰋋" if dev.get("icon") in ("audio-headset", "audio-headphones") else "󰂱"
+            winner.accessory_label = dev.get("name", "BT")[:6]
+            winner.accessory_visible = True
+
         return winner
 
     def render_and_broadcast(self):
@@ -410,8 +457,8 @@ class DynamicIslandDaemon:
         stream_payload = state.to_waybar_payload(self.config)
         stream_line = json.dumps(stream_payload, ensure_ascii=False)
 
-        # For Waybar stdout: if frontend/mode is 'quickshell' or 'hybrid', hide the Waybar pill
-        if self.config.frontend in ("quickshell", "hybrid") or self.config.mode in ("quickshell", "hybrid"):
+        # For Waybar stdout: if frontend/mode is 'quickshell', 'hybrid', or 'both', hide the Waybar pill to prevent overlap
+        if self.config.frontend in ("quickshell", "hybrid", "both") or self.config.mode in ("quickshell", "hybrid"):
             waybar_payload = {"text": "", "alt": "hidden", "tooltip": "", "class": "island hidden"}
             waybar_line = json.dumps(waybar_payload, ensure_ascii=False)
         else:
@@ -620,9 +667,16 @@ class DynamicIslandDaemon:
     # --------------------------------------------------------------------------
     # Unified Action Dispatcher (IPC & CLI)
     # --------------------------------------------------------------------------
-    async def dispatch_action(self, action: str, args: Dict[str, Any], writer: Optional[asyncio.StreamWriter]) -> Optional[Dict[str, Any]]:
+    async def dispatch_action(self, action: str, args: Any, writer: Optional[asyncio.StreamWriter]) -> Optional[Dict[str, Any]]:
         """Dispatch validated actions strictly without shell=True."""
-        params = args.get("params", [])
+        if isinstance(args, list):
+            params = args
+            args = {"params": params}
+        elif isinstance(args, dict):
+            params = args.get("params", [])
+        else:
+            params = []
+            args = {}
 
         # 1. Frontend Management
         if action in ("frontend_get", "frontend"):
@@ -729,6 +783,11 @@ class DynamicIslandDaemon:
             elif sub == "disconnect":
                 target = params[1] if len(params) > 1 else args.get("device", "")
                 return await self.bluetooth_backend.disconnect(target)
+            elif sub in ("toggle", "power"):
+                enable = args.get("enable") if "enable" in args else None
+                res = await self.bluetooth_backend.toggle_power(enable)
+                self.render_and_broadcast()
+                return res
             elif sub in ("devices", "list"):
                 status_res = await self.bluetooth_backend.fetch_status()
                 return {
@@ -736,8 +795,74 @@ class DynamicIslandDaemon:
                     "version": 1,
                     "status": "ok",
                     "paired": status_res.get("paired_devices", []),
-                    "connected": status_res.get("connected_devices", [])
+                    "connected": status_res.get("connected_devices", []),
+                    "adapter_powered": status_res.get("adapter_powered", False),
+                    "discovering": status_res.get("discovering", False),
                 }
+
+            elif sub in ("ui", "open", "manager", "menu"):
+                ev = IslandState(
+                    event_id="bt-manager-ui",
+                    source="bluetooth",
+                    state="bluetooth_manager",
+                    priority=Priority.SETTINGS,
+                    icon="󰂯",
+                    title="Bluetooth Devices",
+                    subtitle="Manage connections",
+                    duration=None
+                )
+                self.push_transient_event(ev)
+                self.render_and_broadcast()
+                return {"protocol_version": PROTOCOL_VERSION, "version": 1, "status": "ok", "message": "Showing Bluetooth manager UI"}
+
+        # 3.1 Wi-Fi & Network Actions
+        elif action.startswith("wifi") or action.startswith("network"):
+            sub = params[0].lower() if params else action.replace("wifi_", "").replace("network_", "")
+            if sub in ("status", "wifi", "network", "get"):
+                status_res = await self.network_backend.get_wifi_status()
+                return {"protocol_version": PROTOCOL_VERSION, "version": 1, "status": "ok", "wifi": status_res}
+            elif sub in ("ui", "open", "manager", "menu"):
+                ev = IslandState(
+                    event_id="wifi-manager-ui",
+                    source="network",
+                    state="wifi_manager",
+                    priority=Priority.SETTINGS,
+                    icon="󰤨",
+                    title="Wi-Fi Networks",
+                    subtitle="Select network",
+                    duration=None
+                )
+                self.push_transient_event(ev)
+                self.render_and_broadcast()
+                return {"protocol_version": PROTOCOL_VERSION, "version": 1, "status": "ok", "message": "Showing Wi-Fi manager UI"}
+            elif sub in ("scan", "list", "networks"):
+                rescan = args.get("rescan", True) if isinstance(args, dict) else True
+                networks = await self.network_backend.scan_networks(rescan=rescan)
+                status_res = await self.network_backend.get_wifi_status()
+                return {
+                    "protocol_version": PROTOCOL_VERSION,
+                    "version": 1,
+                    "status": "ok",
+                    "networks": networks,
+                    "wifi": status_res,
+                }
+            elif sub == "connect":
+                ssid = str(args.get("ssid", params[1] if len(params) > 1 else "")).strip()
+                password = str(args.get("password", params[2] if len(params) > 2 else ""))
+                bssid = str(args.get("bssid", ""))
+                res = await self.network_backend.connect(ssid, password=password, bssid=bssid)
+                self.render_and_broadcast()
+                return res
+            elif sub == "disconnect":
+                device = str(args.get("device", params[1] if len(params) > 1 else ""))
+                res = await self.network_backend.disconnect(device=device)
+                self.render_and_broadcast()
+                return res
+            elif sub in ("toggle", "power"):
+                enable = args.get("enable") if "enable" in args else None
+                res = await self.network_backend.toggle_radio(enable=enable)
+                self.render_and_broadcast()
+                return res
 
         # 4. Show-Full Presentation Mode
         elif action in ("full_toggle", "toggle_full"):
@@ -1192,28 +1317,170 @@ class DynamicIslandDaemon:
             self.render_and_broadcast()
             return {"version": 1, "status": "ok", "message": f"Set reduced_motion to {self.config.reduced_motion}"}
 
-        elif action == "settings":
-            return {
-                "version": 1,
-                "status": "ok",
-                "settings": {
-                    "mode": self.config.mode,
-                    "frontend": self.config.frontend,
-                    "theme": self.config.theme,
-                    "reduced_motion": self.config.reduced_motion,
-                    "show_full": self.config.show_full,
-                    "presentation_mode": self.config.presentation_mode,
-                    "dock_enabled": getattr(self.config, "dock_enabled", False),
-                    "dock_position": getattr(self.config, "dock_position", "bottom"),
-                    "dock_magnification": getattr(self.config, "dock_magnification", True),
-                    "network_ssid_privacy": self.config.network_ssid_privacy,
-                    "clipboard_privacy": self.config.clipboard_privacy,
-                    "enable_share": getattr(self.config, "enable_share", True),
-                    "enable_window_manager": getattr(self.config, "enable_window_manager", True),
-                }
-            }
+        elif action in ("settings", "settings_get", "settings_set", "settings_reset", "settings_export", "settings_import", "settings_ui"):
+            sub = ""
+            if action.startswith("settings_"):
+                sub = action[len("settings_"):]
+            elif params:
+                sub = str(params[0]).lower().strip()
+            elif args.get("sub"):
+                sub = str(args.get("sub")).lower().strip()
 
-        # 16. Smart Share & Drag-and-Drop
+            if sub in ("set", "update"):
+                key = params[1] if len(params) > 1 else args.get("key", "")
+                val = params[2] if len(params) > 2 else args.get("val", args.get("value", ""))
+                if not key:
+                    return {"version": 1, "status": "error", "message": "Missing setting key"}
+                ok = self.config.set_setting(key, val)
+                if ok:
+                    self.config.save()
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "message": f"Set {key} = {val}", "key": key, "val": val}
+                return {"version": 1, "status": "error", "message": f"Invalid setting key or value: {key}={val}"}
+
+            elif sub in ("reset", "restore_defaults", "defaults"):
+                self.config.restore_defaults()
+                self.render_and_broadcast()
+                return {"version": 1, "status": "ok", "message": "Restored all settings to factory defaults"}
+
+            elif sub == "export":
+                return {
+                    "version": 1,
+                    "status": "ok",
+                    "settings": self.config.export_dict()
+                }
+
+            elif sub == "import":
+                data = args.get("settings", {})
+                if not data and len(params) > 1:
+                    try:
+                        data = json.loads(params[1])
+                    except Exception as e:
+                        return {"version": 1, "status": "error", "message": f"Invalid JSON payload: {e}"}
+                if not data or not isinstance(data, dict):
+                    return {"version": 1, "status": "error", "message": "Missing settings dictionary to import"}
+                self.config.import_dict(data)
+                self.render_and_broadcast()
+                return {"version": 1, "status": "ok", "message": f"Successfully imported {len(data)} settings"}
+
+            elif sub in ("ui", "panel", "open"):
+                settings_state = IslandState(
+                    event_id="settings-ui",
+                    source="settings",
+                    state="settings",
+                    priority=Priority.SETTINGS,
+                    icon="⚙",
+                    title="Preferences & Themes",
+                    subtitle="Tahoe / Glass / OLED",
+                    css_class="settings",
+                    duration=30.0
+                )
+                self.push_transient_event(settings_state)
+                return {"version": 1, "status": "ok", "message": "Opened Settings UI"}
+
+            else:
+                return {
+                    "version": 1,
+                    "status": "ok",
+                    "settings": self.config.export_dict()
+                }
+
+        # 16. System Wallpaper Controls
+        elif action in ("wallpaper", "wallpaper_next", "wallpaper_prev", "wallpaper_random", "wallpaper_set", "wallpaper_get", "wallpaper_list", "wallpaper_gui"):
+            wall_script = Path.home() / ".config" / "sway" / "scripts" / "wallpaper_manager_gui.py"
+            sub = params[0].lower() if params else action.replace("wallpaper_", "")
+            if action == "wallpaper_gui" or sub in ("gui", "open"):
+                if wall_script.exists():
+                    subprocess.Popen(["python3", str(wall_script)], start_new_session=True)
+                    return {"version": 1, "status": "ok", "message": "Launched Wallpaper Manager GUI"}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_next" or sub in ("next", "cycle"):
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--next"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "message": res.stdout.strip() or "Cycled next wallpaper"}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_prev" or sub in ("prev", "previous"):
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--prev"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "message": res.stdout.strip() or "Cycled prev wallpaper"}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_random" or sub in ("random", "rand"):
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--random"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "message": res.stdout.strip() or "Applied random wallpaper"}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_set" or sub in ("set", "apply"):
+                if action == "wallpaper_set":
+                    target_path = params[0] if params else args.get("path", "")
+                else:
+                    target_path = params[1] if len(params) > 1 else args.get("path", "")
+                if not target_path:
+                    return {"version": 1, "status": "error", "message": "Path required for wallpaper set"}
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--set", target_path], capture_output=True, text=True)
+                    if res.returncode == 0:
+                        return {"version": 1, "status": "ok", "message": f"Applied wallpaper {target_path}", "path": target_path}
+                    return {"version": 1, "status": "error", "message": res.stderr.strip() or "Failed to set wallpaper"}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_get" or sub in ("get", "current"):
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--get"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "current": res.stdout.strip()}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            elif action == "wallpaper_list" or sub in ("list", "all"):
+                if wall_script.exists():
+                    res = subprocess.run(["python3", str(wall_script), "--list"], capture_output=True, text=True)
+                    walls = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+                    return {"version": 1, "status": "ok", "wallpapers": walls}
+                return {"version": 1, "status": "error", "message": f"{wall_script} not found"}
+            return {"version": 1, "status": "error", "message": f"Unknown wallpaper action: {sub}"}
+
+        # 17. Full System Theme Controls
+        elif action in ("system_theme", "system_theme_set", "system_theme_next", "system_theme_prev", "system_theme_get", "system_theme_list", "system_theme_gui"):
+            theme_script = Path.home() / ".config" / "sway" / "scripts" / "theme_manager.py"
+            sub = params[0].lower() if params else action.replace("system_theme_", "")
+            if action == "system_theme_gui" or sub in ("gui", "open"):
+                if theme_script.exists():
+                    subprocess.Popen(["python3", str(theme_script)], start_new_session=True)
+                    return {"version": 1, "status": "ok", "message": "Launched Theme Manager GUI"}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            elif action == "system_theme_next" or sub in ("next", "cycle"):
+                if theme_script.exists():
+                    res = subprocess.run(["python3", str(theme_script), "--next"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "message": res.stdout.strip() or "Switched to next system theme"}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            elif action == "system_theme_prev" or sub in ("prev", "previous"):
+                if theme_script.exists():
+                    res = subprocess.run(["python3", str(theme_script), "--prev"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "message": res.stdout.strip() or "Switched to prev system theme"}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            elif action == "system_theme_set" or sub in ("set", "apply"):
+                if action == "system_theme_set":
+                    target_id = params[0] if params else args.get("theme", "")
+                else:
+                    target_id = params[1] if len(params) > 1 else args.get("theme", "")
+                if not target_id:
+                    return {"version": 1, "status": "error", "message": "Theme ID required for system_theme_set"}
+                if theme_script.exists():
+                    res = subprocess.run(["python3", str(theme_script), "--set", target_id], capture_output=True, text=True)
+                    if res.returncode == 0:
+                        return {"version": 1, "status": "ok", "message": f"Applied system theme {target_id}", "theme": target_id}
+                    return {"version": 1, "status": "error", "message": res.stderr.strip() or "Failed to set system theme"}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            elif action == "system_theme_get" or sub in ("get", "current"):
+                if theme_script.exists():
+                    res = subprocess.run(["python3", str(theme_script), "--current"], capture_output=True, text=True)
+                    return {"version": 1, "status": "ok", "current": res.stdout.strip()}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            elif action == "system_theme_list" or sub in ("list", "all"):
+                if theme_script.exists():
+                    res = subprocess.run(["python3", str(theme_script), "--list"], capture_output=True, text=True)
+                    themes = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+                    return {"version": 1, "status": "ok", "themes": themes}
+                return {"version": 1, "status": "error", "message": f"{theme_script} not found"}
+            return {"version": 1, "status": "error", "message": f"Unknown system theme action: {sub}"}
+
+        # 18. Smart Share & Drag-and-Drop
         elif action == "share_inspect":
             raw_urls = args.get("urls", params)
             if isinstance(raw_urls, str):
@@ -1318,6 +1585,14 @@ class DynamicIslandDaemon:
         elif action == "window_restore":
             con_id = int(args.get("con_id", params[0] if params else 0))
             res = self.window_monitor.restore_window(con_id)
+            if res.get("stale"):
+                mins = self.window_monitor.get_minimized_windows()
+                if mins:
+                    self.selected_minimized_index = max(0, min(self.selected_minimized_index, len(mins) - 1))
+                else:
+                    self.selected_minimized_index = 0
+                self.render_and_broadcast()
+                return res
             if res.get("status") == "ok":
                 feedback = IslandState(
                     event_id="window-res",
@@ -1347,7 +1622,54 @@ class DynamicIslandDaemon:
             return res
 
         elif action in ("windows_list", "windows"):
+            if params:
+                sub = str(params[0]).lower().strip()
+                mins = self.window_monitor.get_minimized_windows()
+                if sub == "next":
+                    if mins:
+                        self.selected_minimized_index = (self.selected_minimized_index + 1) % len(mins)
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "selected_index": self.selected_minimized_index}
+                elif sub == "prev":
+                    if mins:
+                        self.selected_minimized_index = (self.selected_minimized_index - 1) % len(mins)
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "selected_index": self.selected_minimized_index}
+                elif sub == "select":
+                    if mins and len(params) > 1:
+                        try:
+                            idx = int(params[1])
+                            self.selected_minimized_index = max(0, min(idx, len(mins) - 1))
+                        except (ValueError, TypeError):
+                            pass
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "selected_index": self.selected_minimized_index}
+                elif sub == "restore":
+                    if mins:
+                        idx = max(0, min(self.selected_minimized_index, len(mins) - 1))
+                        target_id = mins[idx].get("id", 0)
+                        if target_id:
+                            return await self.dispatch_action("window_restore", {"con_id": target_id}, writer)
+                    return {"version": 1, "status": "error", "message": "No minimized window to restore"}
+                elif sub in ("min", "minimize"):
+                    return await self.dispatch_action("window_minimize", args, writer)
+                elif sub in ("mgr", "manager"):
+                    return await self.dispatch_action("minimized_apps", args, writer)
             return {"version": 1, "status": "ok", "windows": self.window_monitor.get_windows()}
+
+        elif action in ("window_next", "windows_next"):
+            mins = self.window_monitor.get_minimized_windows()
+            if mins:
+                self.selected_minimized_index = (self.selected_minimized_index + 1) % len(mins)
+            self.render_and_broadcast()
+            return {"version": 1, "status": "ok", "selected_index": self.selected_minimized_index}
+
+        elif action in ("window_prev", "windows_prev"):
+            mins = self.window_monitor.get_minimized_windows()
+            if mins:
+                self.selected_minimized_index = (self.selected_minimized_index - 1) % len(mins)
+            self.render_and_broadcast()
+            return {"version": 1, "status": "ok", "selected_index": self.selected_minimized_index}
 
         elif action == "profile":
             sub = args.get("subcommand") or (params[0] if params else "get")
@@ -1421,6 +1743,25 @@ class DynamicIslandDaemon:
             self.push_transient_event(min_state)
             return {"version": 1, "status": "ok", "message": "Showing minimized applications manager"}
 
+        elif action in ("quick_actions", "quick_settings", "control", "control_center"):
+            current = self.get_current_state()
+            if current and (current.state in ("quickActions", "quick_actions", "quick_settings") or getattr(current, "event_id", "") == "quick-actions-ui"):
+                self.dismiss_transient()
+                return {"version": 1, "status": "ok", "message": "Closed Quick Actions Control Center"}
+            ev = IslandState(
+                event_id="quick-actions-ui",
+                source="core",
+                state="quickActions",
+                priority=Priority.SETTINGS,
+                icon="󰀻",
+                title="Control Center",
+                subtitle="Quick Actions",
+                duration=None
+            )
+            self.push_transient_event(ev)
+            self.render_and_broadcast()
+            return {"version": 1, "status": "ok", "message": "Showing Quick Actions Control Center"}
+
         return {"version": 1, "status": "error", "message": f"Unknown action: {action}"}
 
     def parse_duration(self, s: str) -> int:
@@ -1479,7 +1820,7 @@ def stream_from_existing_daemon():
                             payload = json.loads(line)
                             fe = payload.get("frontend", "")
                             md = payload.get("mode", "")
-                            if fe in ("quickshell", "hybrid") or md in ("quickshell", "hybrid"):
+                            if fe in ("quickshell", "hybrid", "both") or md in ("quickshell", "hybrid"):
                                 line = json.dumps({"text": "", "alt": "hidden", "tooltip": "", "class": "island hidden"}, ensure_ascii=False)
                         except Exception:
                             pass

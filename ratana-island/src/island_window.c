@@ -202,6 +202,14 @@ static void on_capsule_secondary_clicked(GtkGestureClick *gesture, int n_press, 
     ratana_island_window_open_settings(win);
 }
 
+static void on_capsule_long_pressed(GtkGestureLongPress *gesture, double x, double y, gpointer user_data) {
+    (void)gesture;
+    (void)x;
+    (void)y;
+    RatanaIslandWindow *win = (RatanaIslandWindow *)user_data;
+    ratana_island_window_toggle_expanded(win);
+}
+
 static void on_output_clicked(GtkButton *btn, gpointer user_data) {
     (void)btn;
     RatanaIslandWindow *win = (RatanaIslandWindow *)user_data;
@@ -335,6 +343,11 @@ RatanaIslandWindow *ratana_island_window_new(GtkApplication *app,
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(sec_click), GDK_BUTTON_SECONDARY);
     g_signal_connect(sec_click, "pressed", G_CALLBACK(on_capsule_secondary_clicked), win);
     gtk_widget_add_controller(win->capsule_box, GTK_EVENT_CONTROLLER(sec_click));
+
+    GtkGesture *long_press = gtk_gesture_long_press_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(long_press), GDK_BUTTON_PRIMARY);
+    g_signal_connect(long_press, "pressed", G_CALLBACK(on_capsule_long_pressed), win);
+    gtk_widget_add_controller(win->capsule_box, GTK_EVENT_CONTROLLER(long_press));
 
     /* Stack for views */
     win->stack = gtk_stack_new();

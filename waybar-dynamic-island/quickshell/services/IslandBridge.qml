@@ -53,12 +53,20 @@ QtObject {
     property var shareTargets: []
     property var runningWindows: []
     property var minimizedWindows: []
+    property int selectedMinimizedIndex: 0
+    property var focusedWindow: null
+    readonly property var selectedMinimizedWindow: {
+        if (!minimizedWindows || minimizedWindows.length === 0) return null;
+        var idx = Math.max(0, Math.min(selectedMinimizedIndex, minimizedWindows.length - 1));
+        return minimizedWindows[idx];
+    }
     signal windowAnimationRequested(var animData)
+    signal windowAbsorptionPulseRequested()
 
     // Layout, Positioning & Style Options
     property string capsulePosition: "top-center"
     property bool blurEnabled: true
-    property string minimizeStyle: "scale"
+    property string minimizeStyle: "macos-genie-inspired"
     property string minimizeTarget: "island"
     property string minimizedAppsVisibility: "auto"
 
@@ -66,12 +74,33 @@ QtObject {
     property bool userExpanded: false
     property bool quickActionsOpen: false
     property bool settingsOpen: false
+    property bool wifiOpen: false
+    property bool bluetoothOpen: false
+
+    // Wi-Fi Interactive State
+    property var wifiNetworks: []
+    property bool wifiScanning: false
+    property var wifiStatus: ({ "available": true, "enabled": true, "connected": false, "ssid": "", "signal": 0, "icon": "󰤮" })
+
+    // Bluetooth Interactive State
+    property var bluetoothDevices: []
+    property bool bluetoothScanning: false
+    property bool bluetoothPowered: true
+
+    // Apple-style Dual Split Accessory Pill State
+    property string accessoryIcon: ""
+    property string accessoryLabel: ""
+    property bool accessoryVisible: false
 
     // Compute effective visual state across all states
     function updateVisualState() {
-        if (settingsOpen) {
+        if (wifiOpen || activeState === "wifi_manager") {
+            visualState = "wifi_manager";
+        } else if (bluetoothOpen || activeState === "bluetooth_manager") {
+            visualState = "bluetooth_manager";
+        } else if (settingsOpen || activeState === "settings") {
             visualState = "settings";
-        } else if (quickActionsOpen) {
+        } else if (quickActionsOpen || activeState === "quickActions" || activeState === "quick_actions" || activeState === "quick_settings") {
             visualState = "quickActions";
         } else if (activeState === "drag_active" || activeState === "drag_enter") {
             visualState = "dragActive";
@@ -81,8 +110,6 @@ QtObject {
             visualState = "minimized_apps";
         } else if (activeState === "minimized" || activeState === "restoring" || activeState === "minimize_detected" || activeState === "minimize_animating" || activeState === "restore_detected" || activeState === "restore_animating") {
             visualState = "windowAnimation";
-        } else if (activeState === "quick_settings") {
-            visualState = "quickActions";
         } else if (activeState === "media_expanded") {
             visualState = "mediaExpanded";
         } else if (userExpanded && (activeState === "media" || activeState === "idle")) {
@@ -98,10 +125,19 @@ QtObject {
         }
     }
 
-    onActiveStateChanged: updateVisualState()
+    onActiveStateChanged: {
+        updateVisualState();
+        if (activeState === "wifi_manager") {
+            scanWifi();
+        } else if (activeState === "bluetooth_manager") {
+            scanBluetooth();
+        }
+    }
     onUserExpandedChanged: updateVisualState()
     onQuickActionsOpenChanged: updateVisualState()
     onSettingsOpenChanged: updateVisualState()
+    onWifiOpenChanged: updateVisualState()
+    onBluetoothOpenChanged: updateVisualState()
 
     // Socket Connection
     property var socket: Socket {
@@ -198,6 +234,21 @@ QtObject {
                                 root.minimizedWindows = minList;
                             }
                         }
+                        if (msg.selected_minimized_index !== undefined) {
+                            root.selectedMinimizedIndex = parseInt(msg.selected_minimized_index) || 0;
+                        }
+                        if (msg.focused_window !== undefined) {
+                            root.focusedWindow = msg.focused_window;
+                        }
+                        if (msg.accessory_icon !== undefined) {
+                            root.accessoryIcon = msg.accessory_icon || "";
+                        }
+                        if (msg.accessory_label !== undefined) {
+                            root.accessoryLabel = msg.accessory_label || "";
+                        }
+                        if (msg.accessory_visible !== undefined) {
+                            root.accessoryVisible = Boolean(msg.accessory_visible);
+                        }
                     }
                 } catch (e) {
                     // Ignore transient malformed chunks
@@ -218,17 +269,12 @@ QtObject {
 
     // Action Helpers
     function sendCommand(action, params) {
-        var cmd = ["island-ctl", action];
+        var cmd = ["/home/reny/.local/bin/island-ctl", action];
         if (params && params.length > 0) {
             cmd = cmd.concat(params);
         }
-        cmdProcess.command = cmd;
-        cmdProcess.running = true;
-    }
-
-    property var cmdProcess: Process {
-        id: cmdProc
-        command: ["island-ctl", "status"]
+        var p = appLauncherComponent.createObject(root, { command: cmd });
+        if (p) p.running = true;
     }
 
     function toggleMedia() { sendCommand("media", ["toggle"]); }
@@ -282,6 +328,30 @@ QtObject {
         if (p) p.running = true;
     }
 
+    function nextMinimizedWindow() {
+        sendCommand("windows", ["next"]);
+    }
+
+    function prevMinimizedWindow() {
+        sendCommand("windows", ["prev"]);
+    }
+
+    function selectMinimizedIndex(idx) {
+        sendCommand("windows", ["select", "" + idx]);
+    }
+
+    function triggerAbsorptionPulse() {
+        root.windowAbsorptionPulseRequested();
+    }
+
+    function restoreSelectedWindow() {
+        if (selectedMinimizedWindow && selectedMinimizedWindow.id) {
+            restoreWindow(selectedMinimizedWindow.id);
+        } else {
+            sendCommand("windows", ["restore"]);
+        }
+    }
+
     function toggleWindow(conId) {
         var p = appLauncherComponent.createObject(root, {
             command: ["island-ctl", "windows", "toggle", "" + conId]
@@ -313,12 +383,17 @@ QtObject {
     }
 
     function dismiss() {
-        if (activeState === "share_picker") {
+        if (wifiOpen) {
+            wifiOpen = false;
+        } else if (bluetoothOpen) {
+            bluetoothOpen = false;
+        } else if (activeState === "share_picker") {
             cancelShare();
         } else if (settingsOpen) {
             settingsOpen = false;
-        } else if (quickActionsOpen) {
+        } else if (quickActionsOpen || activeState === "quickActions" || activeState === "quick_actions") {
             quickActionsOpen = false;
+            sendCommand("dismiss");
         } else if (userExpanded) {
             userExpanded = false;
         } else {
@@ -327,18 +402,30 @@ QtObject {
     }
 
     function toggleQuickActions() {
+        wifiOpen = false;
+        bluetoothOpen = false;
         settingsOpen = false;
         userExpanded = false;
-        quickActionsOpen = !quickActionsOpen;
+        if (quickActionsOpen || activeState === "quickActions" || activeState === "quick_actions") {
+            quickActionsOpen = false;
+            sendCommand("dismiss");
+        } else {
+            quickActionsOpen = true;
+            sendCommand("quick-actions");
+        }
     }
 
     function toggleSettings() {
+        wifiOpen = false;
+        bluetoothOpen = false;
         quickActionsOpen = false;
         userExpanded = false;
         settingsOpen = !settingsOpen;
     }
 
     function toggleExpanded() {
+        wifiOpen = false;
+        bluetoothOpen = false;
         settingsOpen = false;
         quickActionsOpen = false;
         userExpanded = !userExpanded;
@@ -346,5 +433,241 @@ QtObject {
 
     function setTheme(name) {
         sendCommand("theme", ["set", name]);
+    }
+
+    // Wallpaper & Desktop Theme Management
+    function openWallpaperManager() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/wallpaper_manager_gui.py"]
+        });
+        if (p) p.running = true;
+        dismiss();
+    }
+
+    function nextWallpaper() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/wallpaper_manager_gui.py", "--next"]
+        });
+        if (p) p.running = true;
+        sendCommand("wallpaper", ["next"]);
+    }
+
+    function prevWallpaper() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/wallpaper_manager_gui.py", "--prev"]
+        });
+        if (p) p.running = true;
+        sendCommand("wallpaper", ["prev"]);
+    }
+
+    function randomWallpaper() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/wallpaper_manager_gui.py", "--random"]
+        });
+        if (p) p.running = true;
+        sendCommand("wallpaper", ["random"]);
+    }
+
+    function setWallpaper(path) {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/wallpaper_manager_gui.py", "--set", path]
+        });
+        if (p) p.running = true;
+        sendCommand("wallpaper", ["set", path]);
+    }
+
+    function openThemeManager() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["python3", "/home/reny/.config/sway/scripts/theme_manager.py"]
+        });
+        if (p) p.running = true;
+        dismiss();
+    }
+
+    function nextSystemTheme() {
+        sendCommand("system-theme", ["next"]);
+    }
+
+    function prevSystemTheme() {
+        sendCommand("system-theme", ["prev"]);
+    }
+
+    function setSystemTheme(themeId) {
+        sendCommand("system-theme", ["set", themeId]);
+    }
+
+    function openSettings() {
+        wifiOpen = false;
+        bluetoothOpen = false;
+        quickActionsOpen = false;
+        userExpanded = false;
+        settingsOpen = true;
+    }
+
+    function closeSettings() {
+        settingsOpen = false;
+    }
+
+    function setSetting(key, val) {
+        sendCommand("settings", ["set", key, String(val)]);
+    }
+
+    function resetSettings() {
+        sendCommand("settings", ["reset"]);
+    }
+
+    // Wi-Fi Interactive Actions
+    function openWifi() {
+        settingsOpen = false;
+        quickActionsOpen = false;
+        bluetoothOpen = false;
+        wifiOpen = true;
+        scanWifi();
+    }
+
+    function closeWifi() {
+        wifiOpen = false;
+    }
+
+    function toggleWifiView() {
+        if (wifiOpen) closeWifi(); else openWifi();
+    }
+
+    function scanWifi() {
+        wifiScanning = true;
+        wifiScanProcess.running = true;
+    }
+
+    function connectWifi(ssid, password) {
+        if (!ssid) return;
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "wifi", "connect", ssid, password || ""]
+        });
+        if (p) p.running = true;
+        wifiRefreshTimer.restart();
+    }
+
+    function disconnectWifi() {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "wifi", "disconnect"]
+        });
+        if (p) p.running = true;
+        wifiRefreshTimer.restart();
+    }
+
+    function toggleWifi(on) {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "wifi", "toggle"]
+        });
+        if (p) p.running = true;
+        wifiRefreshTimer.restart();
+    }
+
+    property var wifiScanProcess: Process {
+        command: ["python3", "-c", "import socket, json; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect('/run/user/1000/ratana-island.sock'); s.sendall(b'{\"command\":\"wifi_scan\"}\\n'); print(s.recv(32768).decode())"]
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: data => {
+                root.wifiScanning = false;
+                if (!data || data.trim().length === 0) return;
+                try {
+                    var res = JSON.parse(data.trim());
+                    if (res.networks) root.wifiNetworks = res.networks;
+                    if (res.wifi) root.wifiStatus = res.wifi;
+                } catch (e) {}
+            }
+        }
+    }
+
+    property var wifiRefreshTimer: Timer {
+        interval: 1500
+        repeat: false
+        onTriggered: scanWifi()
+    }
+
+    // Bluetooth Interactive Actions
+    function openBluetooth() {
+        settingsOpen = false;
+        quickActionsOpen = false;
+        wifiOpen = false;
+        bluetoothOpen = true;
+        scanBluetooth();
+    }
+
+    function closeBluetooth() {
+        bluetoothOpen = false;
+    }
+
+    function toggleBluetoothView() {
+        if (bluetoothOpen) closeBluetooth(); else openBluetooth();
+    }
+
+    function scanBluetooth() {
+        bluetoothScanning = true;
+        bluetoothScanProcess.running = true;
+    }
+
+    function connectBluetooth(mac) {
+        if (!mac) return;
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "bluetooth", "connect", mac]
+        });
+        if (p) p.running = true;
+        btRefreshTimer.restart();
+    }
+
+    function disconnectBluetooth(mac) {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "bluetooth", "disconnect", mac || ""]
+        });
+        if (p) p.running = true;
+        btRefreshTimer.restart();
+    }
+
+    function toggleBluetooth(on) {
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "bluetooth", "toggle"]
+        });
+        if (p) p.running = true;
+        btRefreshTimer.restart();
+    }
+
+    property var bluetoothScanProcess: Process {
+        command: ["python3", "-c", "import socket, json; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect('/run/user/1000/ratana-island.sock'); s.sendall(b'{\"command\":\"bluetooth_devices\"}\\n'); print(s.recv(16384).decode())"]
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: data => {
+                root.bluetoothScanning = false;
+                if (!data || data.trim().length === 0) return;
+                try {
+                    var res = JSON.parse(data.trim());
+                    var paired = res.paired || [];
+                    var conn = res.connected || [];
+                    var merged = [];
+                    var macs = {};
+                    for (var i = 0; i < conn.length; i++) {
+                        conn[i].connected = true;
+                        merged.push(conn[i]);
+                        macs[conn[i].mac] = true;
+                    }
+                    for (var j = 0; j < paired.length; j++) {
+                        if (!macs[paired[j].mac]) {
+                            paired[j].connected = false;
+                            merged.push(paired[j]);
+                        }
+                    }
+                    root.bluetoothDevices = merged;
+                    if (res.adapter_powered !== undefined) {
+                        root.bluetoothPowered = Boolean(res.adapter_powered);
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    property var btRefreshTimer: Timer {
+        interval: 1500
+        repeat: false
+        onTriggered: scanBluetooth()
     }
 }

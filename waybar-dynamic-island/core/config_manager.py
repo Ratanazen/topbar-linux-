@@ -100,7 +100,7 @@ class IslandConfig:
 
         # Window Minimize / Restore Animation Configuration
         self.minimize_animation_enabled: bool = True
-        self.minimize_style: str = "scale"  # 'genie', 'scale', 'scale-fade', 'spring', 'reduced-motion', 'none'
+        self.minimize_style: str = "macos-genie-inspired"  # 'macos-genie-inspired', 'spring-scale', 'scale-fade', 'reduced-motion', 'none', 'low-resource'
         self.minimize_target: str = "island"  # 'island' or 'dock'
         self.minimize_duration_ms: int = 380
         self.minimize_highlight: bool = True
@@ -134,19 +134,29 @@ class IslandConfig:
     def normalize_minimize_style(style_name: str) -> str:
         """Map human or legacy style strings to canonical style tokens."""
         s = str(style_name).strip().lower()
+        if s in ("lamp", "macos-lamp", "lamp-effect", "magic-lamp", "aladdin"):
+            return "macos-lamp"
         if s in ("genie", "genie-inspired", "macos-genie", "macos-genie-inspired"):
-            return "genie"
-        if s in ("scale", "macos-scale", "minimize-to-island", "minimize-to-dock"):
-            return "scale"
+            return "macos-genie-inspired"
+        if s in ("spring-scale", "spring_scale"):
+            return "spring-scale"
+        if s in ("originos-spring", "spring", "bounce", "elastic"):
+            return "originos-spring"
+        if s in ("originos-morph", "morph"):
+            return "originos-morph"
+        if s in ("hyperos-mini", "hyperos", "mini", "snappy"):
+            return "hyperos-mini"
         if s in ("scale-fade", "scale_fade", "macos-fade", "fade"):
             return "scale-fade"
-        if s in ("spring", "bounce", "elastic"):
-            return "spring"
+        if s in ("low-resource", "low_resource", "lightweight", "fast"):
+            return "low-resource"
         if s in ("reduced-motion", "reduced_motion", "subtle"):
             return "reduced-motion"
         if s in ("none", "disabled", "off"):
             return "none"
-        return "scale"
+        if s in ("scale", "macos-scale", "minimize-to-island", "minimize-to-dock"):
+            return "scale"
+        return "macos-genie-inspired"
 
     def apply_profile(self, profile_name: str):
         """Configure parameters dynamically based on selected performance profile."""
@@ -158,7 +168,7 @@ class IslandConfig:
             self.reduced_motion = True
             self.blur_enabled = False
             self.minimize_duration_ms = 180
-            self.minimize_style = "scale-fade"
+            self.minimize_style = "low-resource"
             self.max_cached_images = 8
         elif p == "visual-quality":
             self.performance_profile = "visual-quality"
@@ -167,7 +177,7 @@ class IslandConfig:
             self.reduced_motion = False
             self.blur_enabled = True
             self.minimize_duration_ms = 420
-            self.minimize_style = "genie"
+            self.minimize_style = "macos-genie-inspired"
             self.max_cached_images = 64
         else:  # balanced
             self.performance_profile = "balanced"
@@ -352,6 +362,164 @@ class IslandConfig:
             log.info(f"Persisted configuration atomically to {self.config_file}")
         except Exception as e:
             log.error(f"Failed to save {self.config_file}: {e}")
+
+    def restore_defaults(self):
+        """Restore all configuration settings to factory defaults and save."""
+        self.mode = "waybar-enhanced"
+        self.theme = "macos-black"
+        self.presentation_mode = "stable-width"
+        self.compact_width = 160
+        self.expanded_width = 280
+        self.position = "top-center"
+        self.blur_enabled = True
+        self.monitor = ""
+        self.reduced_motion = False
+        self.show_full = False
+        self.enable_media = True
+        self.enable_volume = True
+        self.enable_brightness = True
+        self.enable_notifications = True
+        self.enable_battery = True
+        self.enable_recording = True
+        self.enable_network = True
+        self.enable_clipboard = True
+        self.enable_timer = True
+        self.enable_language = True
+        self.enable_system_metrics = True
+        self.enable_share = True
+        self.enable_window_manager = True
+        self.idle_show_language = True
+        self.language_format = "both"
+        self.frontend = "waybar"
+        self.dock_enabled = False
+        self.dock_position = "bottom"
+        self.dock_icon_size = 48
+        self.dock_magnification = True
+        self.dock_autohide = False
+        self.performance_profile = "balanced"
+        self.adaptive_refresh = True
+        self.idle_clock_interval_s = 15.0
+        self.metrics_interval_s = 3.0
+        self.max_cached_images = 24
+        self.minimize_animation_enabled = True
+        self.minimize_style = "macos-genie-inspired"
+        self.minimize_target = "island"
+        self.minimize_duration_ms = 380
+        self.minimize_highlight = True
+        self.minimized_apps_visibility = "auto"
+        self.minimize_exclusions = []
+        self.network_ssid_privacy = True
+        self.clipboard_privacy = True
+        self.preferred_menu = "auto"
+        self.volume_timeout_s = 1.5
+        self.brightness_timeout_s = 1.5
+        self.notification_timeout_s = 4.0
+        self.urgent_notification_timeout_s = 6.0
+        self.network_timeout_s = 3.0
+        self.clipboard_timeout_s = 2.0
+        self.charging_timeout_s = 3.0
+        self.language_timeout_s = 2.0
+        self.share_timeout_s = 60.0
+        self.battery_low_threshold = 15
+        self.save()
+
+    def export_dict(self) -> Dict[str, Any]:
+        """Export all current configurable settings as a dictionary."""
+        return {
+            "mode": self.mode,
+            "frontend": self.frontend,
+            "theme": self.theme,
+            "presentation_mode": self.presentation_mode,
+            "position": self.position,
+            "blur_enabled": self.blur_enabled,
+            "reduced_motion": self.reduced_motion,
+            "show_full": self.show_full,
+            "performance_profile": self.performance_profile,
+            "dock_enabled": self.dock_enabled,
+            "dock_position": self.dock_position,
+            "dock_icon_size": self.dock_icon_size,
+            "dock_magnification": self.dock_magnification,
+            "dock_autohide": self.dock_autohide,
+            "minimize_animation_enabled": self.minimize_animation_enabled,
+            "minimize_style": self.minimize_style,
+            "minimize_target": self.minimize_target,
+            "minimize_duration_ms": self.minimize_duration_ms,
+            "minimize_highlight": self.minimize_highlight,
+            "minimized_apps_visibility": self.minimized_apps_visibility,
+            "network_ssid_privacy": self.network_ssid_privacy,
+            "clipboard_privacy": self.clipboard_privacy,
+            "enable_share": self.enable_share,
+            "enable_window_manager": self.enable_window_manager,
+            "enable_media": self.enable_media,
+            "enable_volume": self.enable_volume,
+            "enable_brightness": self.enable_brightness,
+            "enable_notifications": self.enable_notifications,
+            "enable_battery": self.enable_battery,
+            "enable_network": self.enable_network,
+        }
+
+    def import_dict(self, data: Dict[str, Any]) -> bool:
+        """Validate and import settings from a dictionary."""
+        if not isinstance(data, dict):
+            return False
+        for k, v in data.items():
+            self.set_setting(k, v)
+        self.save()
+        return True
+
+    def set_setting(self, key: str, val: Any) -> bool:
+        """Set a single configuration setting with validation and type coercion."""
+        key = str(key).strip().lower()
+        bool_keys = {
+            "blur_enabled", "reduced_motion", "show_full", "dock_enabled",
+            "dock_magnification", "dock_autohide", "minimize_animation_enabled",
+            "minimize_highlight", "network_ssid_privacy", "clipboard_privacy",
+            "enable_share", "enable_window_manager", "enable_media", "enable_volume",
+            "enable_brightness", "enable_notifications", "enable_battery", "enable_network"
+        }
+        int_keys = {"dock_icon_size", "minimize_duration_ms", "compact_width", "expanded_width"}
+
+        if key in bool_keys:
+            if isinstance(val, str):
+                b = val.lower() in ("true", "1", "yes", "on")
+            else:
+                b = bool(val)
+            setattr(self, key, b)
+            return True
+        elif key in int_keys:
+            try:
+                setattr(self, key, int(val))
+                return True
+            except (ValueError, TypeError):
+                return False
+        elif key == "theme":
+            norm = normalize_theme(str(val))
+            if norm:
+                self.theme = norm
+                return True
+            return False
+        elif key == "mode":
+            m = str(val).lower()
+            if m in MODES:
+                self.mode = m
+                return True
+            return False
+        elif key == "frontend":
+            f = str(val).lower()
+            if f in ("waybar", "quickshell", "both", "hybrid"):
+                self.frontend = f
+                return True
+            return False
+        elif key == "minimize_style":
+            self.minimize_style = self.normalize_minimize_style(str(val))
+            return True
+        elif key == "performance_profile":
+            self.apply_profile(str(val))
+            return True
+        elif hasattr(self, key):
+            setattr(self, key, val)
+            return True
+        return False
 
 
 class BackendCapabilities:

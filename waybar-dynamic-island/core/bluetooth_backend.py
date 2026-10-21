@@ -326,9 +326,37 @@ class BluetoothBackend:
         try:
             # Start scan in background
             await asyncio.create_subprocess_exec("bluetoothctl", "--timeout", str(duration), "scan", "on")
-            return {"status": "ok", "message": f"Started Bluetooth scan ({duration}s)"}
         except Exception as e:
             return {"status": "error", "message": f"Scan failed: {e}"}
+
+    async def toggle_power(self, enable: Optional[bool] = None) -> Dict[str, Any]:
+        """Toggles or sets Bluetooth adapter power state."""
+        try:
+            status = await self.fetch_status()
+            current_powered = status.get("adapter_powered", False)
+            target = not current_powered if enable is None else bool(enable)
+            arg = "power on" if target else "power off"
+
+            proc = await asyncio.create_subprocess_exec(
+                "bluetoothctl", *arg.split(),
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL
+            )
+            await proc.communicate()
+
+            ev = IslandState(
+                source="bluetooth",
+                state="bluetooth",
+                priority=Priority.BLUETOOTH_CONNECTED,
+                icon="󰂯" if target else "󰂲",
+                title="Bluetooth " + ("On" if target else "Off"),
+                subtitle="Adapter " + ("Powered On" if target else "Powered Off"),
+                css_class="bluetooth",
+                duration=2.0
+            )
+            self.on_transient_event(ev)
+            return {"status": "ok", "powered": target}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
     def _resolve_mac(self, device_id: str) -> Optional[str]:
         device_id = device_id.strip()

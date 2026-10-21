@@ -156,15 +156,31 @@ class IpcServer:
                 pass
 
     def broadcast_stream(self, stream_line: str):
-        """Sends a JSON line to all connected streaming clients (e.g. Quickshell)."""
+        async def _safe_drain(w):
+            try:
+                await w.drain()
+            except Exception:
+                if w in self.client_writers:
+                    try:
+                        self.client_writers.remove(w)
+                    except ValueError:
+                        pass
+                try:
+                    w.close()
+                except Exception:
+                    pass
+
         dead_writers = []
         data = (stream_line + "\n").encode("utf-8")
-        for writer in self.client_writers:
+        for writer in list(self.client_writers):
+            if writer.is_closing():
+                dead_writers.append(writer)
+                continue
             try:
                 writer.write(data)
                 try:
                     loop = asyncio.get_running_loop()
-                    loop.create_task(writer.drain())
+                    loop.create_task(_safe_drain(writer))
                 except RuntimeError:
                     pass
             except Exception:

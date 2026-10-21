@@ -23,9 +23,11 @@ Rectangle {
         }
         var baseWidth = 180;
         switch (IslandBridge.visualState) {
+            case "wifi_manager": baseWidth = 400; break;
+            case "bluetooth_manager": baseWidth = 380; break;
             case "sharePicker": baseWidth = 460; break;
             case "dragActive": baseWidth = 340; break;
-            case "settings": baseWidth = 360; break;
+            case "settings": baseWidth = 400; break;
             case "quickActions":
             case "quick_settings": baseWidth = 380; break;
             case "expanded": baseWidth = 360; break;
@@ -70,13 +72,15 @@ Rectangle {
             return 56;
         }
         switch (IslandBridge.visualState) {
+            case "wifi_manager": return 310;
+            case "bluetooth_manager": return 260;
             case "sharePicker": return 330;
             case "dragActive": return 56;
             case "minimized_apps": return 240;
             case "mediaExpanded":
             case "media_expanded": return 134;
             case "expanded": return (IslandBridge.minimizedWindows && IslandBridge.minimizedWindows.length > 0) ? 142 : 126;
-            case "settings": return 118;
+            case "settings": return 304;
             case "quickActions":
             case "quick_settings": return 220;
             case "notification": return 60;
@@ -116,13 +120,39 @@ Rectangle {
         }
     }
 
-    width: targetWidth
+    // Absorption reaction pulse (when app enters/leaves island, Image 1 Step 3)
+    property real pulseScale: 1.0
+    property real pulseWidthExtra: 0
+
+    Connections {
+        target: IslandBridge
+        function onWindowAbsorptionPulseRequested() {
+            absorptionPulseAnim.restart();
+        }
+    }
+
+    SequentialAnimation {
+        id: absorptionPulseAnim
+        ParallelAnimation {
+            NumberAnimation { target: capsule; property: "pulseScale"; to: 1.07; duration: 130; easing.type: Easing.OutBack; easing.overshoot: 1.2 }
+            NumberAnimation { target: capsule; property: "pulseWidthExtra"; to: 24; duration: 130; easing.type: Easing.OutQuad }
+        }
+        ParallelAnimation {
+            NumberAnimation { target: capsule; property: "pulseScale"; to: 1.0; duration: 200; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: capsule; property: "pulseWidthExtra"; to: 0; duration: 200; easing.type: Easing.InOutQuad }
+        }
+    }
+
+    scale: pulseScale
+    width: targetWidth + pulseWidthExtra
     height: targetHeight
     radius: targetRadius
 
     // Fallback crisp opaque glass styling when compositor blur is disabled or unsupported
     color: IslandBridge.blurEnabled ? Theme.background : Qt.rgba(0.08, 0.08, 0.1, 0.98)
     border.color: {
+        if (pulseScale > 1.01)
+            return Theme.accentCyan;
         if (dropArea.containsDrag || contentHost.isDragHovered || IslandBridge.visualState === "dragActive")
             return Theme.accent;
         if (IslandBridge.visualState === "sharePicker")
@@ -131,7 +161,7 @@ Rectangle {
             return Theme.accentRed;
         return capsuleHover.hovered ? Theme.accent : Theme.border;
     }
-    border.width: (dropArea.containsDrag || contentHost.isDragHovered || IslandBridge.visualState === "dragActive" || IslandBridge.visualState === "recording") ? 1.5 : 1.0
+    border.width: (pulseScale > 1.01 || dropArea.containsDrag || contentHost.isDragHovered || IslandBridge.visualState === "dragActive" || IslandBridge.visualState === "recording") ? 1.5 : 1.0
 
     // Smooth Spring Morphing Transitions
     Behavior on width {
@@ -206,9 +236,15 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
+        z: enabled ? 1 : -1
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         hoverEnabled: false
-        enabled: IslandBridge.visualState !== "sharePicker" && IslandBridge.visualState !== "settings" && IslandBridge.visualState !== "quickActions"
+        pressAndHoldInterval: 350
+        enabled: IslandBridge.visualState !== "sharePicker" && IslandBridge.visualState !== "settings" && IslandBridge.visualState !== "quickActions" && IslandBridge.visualState !== "wifi_manager" && IslandBridge.visualState !== "bluetooth_manager"
+
+        onPressAndHold: {
+            IslandBridge.toggleQuickActions();
+        }
 
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
@@ -222,7 +258,7 @@ Rectangle {
                     IslandBridge.dismiss();
                 } else if (IslandBridge.visualState === "bluetooth") {
                     IslandBridge.sendCommand("bluetooth", ["scan"]);
-                } else if (IslandBridge.visualState === "idle") {
+                } else {
                     IslandBridge.toggleQuickActions();
                 }
             }

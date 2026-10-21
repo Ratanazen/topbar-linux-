@@ -1,55 +1,358 @@
-// =============================================================================
-// WAYBAR DYNAMIC ISLAND — MODULE CONFIGURATION (config.jsonc)
-// =============================================================================
-// Place this inside your ~/.config/waybar/config.jsonc
-// =============================================================================
-
 {
-    "layer": "top",
-    "position": "top",
-    "height": 34,
-    "spacing": 4,
+  "layer": "top",
+  "position": "top",
+  "exclusive": true,
+  "reload_style_on_change": true,
+  "height": 32,
+  "margin-top": 4,
+  "margin-left": 8,
+  "margin-right": 8,
+  "margin-bottom": 4,
+  "spacing": 6,
+  "fixed-center": true,
 
-    // Module Layout: Center is reserved exclusively for the Dynamic Island
-    "modules-left": [
-        "sway/workspaces",     // or "hyprland/workspaces"
-        "sway/mode"
-    ],
-    "modules-center": [
-        "custom/island"
-    ],
-    "modules-right": [
-        "tray",
-        "wireplumber",
-        "battery",
-        "clock"
-    ],
+  "modules-left": [
+    "group/left1",
+    "group/left2"
+  ],
+  "modules-center": [
+    "custom/island"
+  ],
+  "modules-right": [
+    "group/tray-expander",
+    "backlight",
+    "bluetooth",
+    "pulseaudio",
+    "network",
+    "memory",
+    "cpu",
+    "custom/fan",
+    "custom/darkmode",
+    "custom/theme",
+    "custom/wallpaper",
+    "custom/function",
+    "custom/language",
+    "battery",
+    "custom/weather",
+    "clock"
+  ],
 
-    // =========================================================================
-    // DYNAMIC ISLAND MODULE DEFINITION
-    // =========================================================================
-    "custom/island": {
-        // Option A: Direct daemon streaming (Recommended)
-        "exec": "$HOME/.config/waybar/scripts/island-daemon.py",
+  /* Zone A: Left Group 1 (Settings / Status) */
+  "group/left1": {
+    "orientation": "inherit",
+    "modules": [
+      "custom/omarchy",
+      "idle_inhibitor",
+      "custom/update"
+    ]
+  },
 
-        // Option B: If running island-daemon via systemd service, uncomment:
-        // "exec": "$HOME/.config/waybar/scripts/island-ctl stream",
+  "custom/omarchy": {
+    "format": "",
+    "on-click": "fuzzel",
+    "on-click-right": "nwg-drawer",
+    "tooltip-format": "Applications Menu\n\nLeft-click: Fuzzel\nRight-click: Drawer"
+  },
 
-        "return-type": "json",
-        "format": "{}",
-        "escape": false,           // Required: allows Pango markup spans for styling
-        "restart-interval": 2,     // Auto-reconnect if daemon restarts
-        "hide-empty-text": true,
-        "tooltip": true,
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": " ",
+      "deactivated": " "
+    },
+    "tooltip-format-activated": "Idle Inhibitor: Active (Screen stays on)",
+    "tooltip-format-deactivated": "Idle Inhibitor: Inactive (Normal sleep)"
+  },
 
-        // Interactive Event Bindings
-        "on-click": "$HOME/.config/waybar/scripts/island-ctl media toggle",
-        "on-click-right": "$HOME/.config/waybar/scripts/island-ctl menu",
-        "on-click-middle": "$HOME/.config/waybar/scripts/island-ctl media next",
-        "on-scroll-up": "$HOME/.config/waybar/scripts/island-ctl volume up",
-        "on-scroll-down": "$HOME/.config/waybar/scripts/island-ctl volume down",
+  "custom/update": {
+    "format": " {}",
+    "exec": "checkupdates 2>/dev/null | wc -l",
+    "on-click": "kitty --title waybar_garuda-update -e garuda-update",
+    "tooltip-format": "Garuda / Arch Updates Available\nClick to launch garuda-update",
+    "interval": 3600
+  },
 
-        // Signal for instant updates (SIGRTMIN+8 = signal 8)
-        "signal": 8
+  /* Zone A: Left Group 2 (Workspaces) */
+  "group/left2": {
+    "orientation": "inherit",
+    "modules": [
+      "sway/workspaces"
+    ]
+  },
+
+  "sway/workspaces": {
+    "disable-scroll": false,
+    "all-outputs": true,
+    "format": "{name}",
+    "persistent-workspaces": {
+      "1": [],
+      "2": [],
+      "3": [],
+      "4": [],
+      "5": []
+    },
+    "on-click": "activate"
+  },
+
+  "wlr/taskbar": {
+    "format": "{icon}",
+    "icon-size": 16,
+    "icon-theme": "Papirus-Dark",
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close",
+    "all-outputs": false,
+    "ignore-list": [
+      "kitty_float",
+      "waybar_garuda-update"
+    ]
+  },
+
+  /* Zone B: Center Group (Active Window Title) */
+  "sway/window": {
+    "format": "{title}",
+    "max-length": 55,
+    "rewrite": {
+      "(.*) — Mozilla Firefox": "󰈹 $1",
+      "(.*) - Google Chrome": " $1",
+      "(.*) - Visual Studio Code": "󰨞 $1",
+      "(.*) - kitty": "󰄛 $1",
+      "(.*) - Foot": "󰄛 $1",
+      "(.*) - Spotify": " $1",
+      "(.*)cbonsai(.*)": "👻 cbonsai --screensave ~",
+      "^$": " Desktop"
     }
+  },
+
+  /* Zone C: Right Group (Status & Information) */
+  "group/tray-expander": {
+    "orientation": "inherit",
+    "drawer": {
+      "transition-duration": 500,
+      "children-class": "tray-group-item"
+    },
+    "modules": [
+      "custom/expand-icon",
+      "tray"
+    ]
+  },
+
+  "custom/expand-icon": {
+    "format": "  ",
+    "tooltip": false
+  },
+
+  "tray": {
+    "icon-size": 13,
+    "spacing": 10
+  },
+
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "tooltip-format": "Brightness: {percent}%",
+    "format-icons": [
+      "󰃞",
+      "󰃝",
+      "󰃟",
+      "󰃠"
+    ]
+  },
+
+  "custom/darkmode": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 2,
+    "signal": 10,
+    "exec": "$HOME/.config/waybar/scripts/toggle_dark_light.sh",
+    "on-click": "$HOME/.config/waybar/scripts/toggle_dark_light.sh --toggle",
+    "on-click-right": "python3 ~/.config/sway/scripts/theme_manager.py",
+    "tooltip": true
+  },
+
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "󰂲",
+    "format-off": "󰂲",
+    "format-connected": "",
+    "tooltip-format": "Bluetooth Devices connected: {num_connections}",
+    "on-click": "blueman-manager"
+  },
+
+  "pulseaudio": {
+    "format": "{icon}",
+    "format-muted": "",
+    "format-icons": {
+      "default": [
+        "",
+        "",
+        ""
+      ]
+    },
+    "on-click": "pavucontrol",
+    "on-click-right": "pamixer -t",
+    "tooltip-format": "Volume: {volume}%",
+    "scroll-step": 5
+  },
+
+  "network": {
+    "format": "{icon}",
+    "format-wifi": "{icon}",
+    "format-ethernet": "󰀂",
+    "format-disconnected": "󰖪",
+    "format-icons": [
+      "󰤯",
+      "󰤟",
+      "󰤢",
+      "󰤥",
+      "󰤨"
+    ],
+    "tooltip-format-wifi": "{essid} ({frequency} GHz)\n⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+    "tooltip-format-ethernet": "Ethernet: ⇣{bandwidthDownBytes}  ⇡{bandwidthUpBytes}",
+    "tooltip-format-disconnected": "Disconnected",
+    "interval": 3,
+    "on-click": "nm-connection-editor"
+  },
+
+  "memory": {
+    "interval": 2,
+    "format": " {percentage:02}%",
+    "on-click": "kitty -e htop"
+  },
+
+  "cpu": {
+    "interval": 2,
+    "format": " {usage:02}%",
+    "on-click": "kitty -e htop"
+  },
+
+  "custom/fan": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "bash ~/.config/waybar/scripts/fan_profile.sh",
+    "on-click": "bash ~/.config/waybar/scripts/fan_profile.sh --next",
+    "on-click-right": "bash ~/.config/waybar/scripts/function_menu.sh",
+    "interval": 5,
+    "signal": 8
+  },
+
+  "custom/theme": {
+    "format": "󰔎",
+    "tooltip-format": "🎨 Theme Changer\nLeft-click: Open Theme Manager\nRight-click: Quick Menu",
+    "on-click": "python3 ~/.config/sway/scripts/theme_manager.py",
+    "on-click-right": "python3 ~/.config/sway/scripts/theme_manager.py --menu"
+  },
+
+  "custom/wallpaper": {
+    "format": "󰸉",
+    "tooltip-format": "🖼️ Wallpaper Manager\nLeft-click: Change, Add &amp; Delete Wallpapers",
+    "on-click": "python3 ~/.config/sway/scripts/wallpaper_manager_gui.py"
+  },
+
+  "custom/function": {
+    "format": "󰘳",
+    "tooltip-format": "⚡ Quick Functions\nLeft-click: Quick Menu\nRight-click: Theme Changer",
+    "on-click": "bash ~/.config/waybar/scripts/function_menu.sh",
+    "on-click-right": "python3 ~/.config/sway/scripts/theme_manager.py"
+  },
+
+  "custom/language": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "bash ~/.config/waybar/scripts/layout_switcher.sh",
+    "on-click": "bash ~/.config/waybar/scripts/layout_switcher.sh --next",
+    "interval": 1,
+    "signal": 9
+  },
+
+  "battery": {
+    "format": "{capacity}% {icon}",
+    "format-charging": "{capacity}% {icon}",
+    "format-plugged": " {capacity}%",
+    "format-icons": {
+      "charging": [
+        "󰢜",
+        "󰂆",
+        "󰂇",
+        "󰂈",
+        "󰢝",
+        "󰂉",
+        "󰢞",
+        "󰂊",
+        "󰂋",
+        "󰂅"
+      ],
+      "default": [
+        "󰁺",
+        "󰁻",
+        "󰁼",
+        "󰁽",
+        "󰁾",
+        "󰁿",
+        "󰂀",
+        "󰂁",
+        "󰂂",
+        "󰁹"
+      ]
+    },
+    "interval": 5,
+    "on-click": "/home/reny/.config/sway/scripts/power_menu.sh",
+    "states": {
+      "warning": 20,
+      "critical": 10
+    }
+  },
+
+  "custom/power-profile": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 10,
+    "signal": 8,
+    "exec": "$HOME/.config/waybar/scripts/power-profile.sh",
+    "on-click": "$HOME/.config/waybar/scripts/power-profile.sh --next",
+    "tooltip": true
+  },
+
+  "custom/weather": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 1800,
+    "exec": "$HOME/.config/waybar/scripts/weather.sh",
+    "tooltip": true
+  },
+
+  "sway/language": {
+    "format": "󰌌 {}",
+    "tooltip-format": "Layout: {long}\nClick or Alt+Shift to switch layout",
+    "on-click": "swaymsg input 'type:keyboard' xkb_switch_layout next"
+  },
+
+  "clock": {
+    "format": " {:%H:%M %a}",
+    "format-alt": " {:%H:%M %Y-%m-%d}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right",
+      "format": {
+        "month": "<span color='#ffead3'><b>{}</b></span>",
+        "weekdays": "<span color='#ffcc66'><b>{}</b></span>",
+        "today": "<span color='#ff6699'><b>{}</b></span>"
+      }
+    }
+  },
+
+  "custom/island": {
+    "exec": "$HOME/.config/waybar/scripts/island-daemon.py",
+    "return-type": "json",
+    "format": "{}",
+    "escape": false,
+    "restart-interval": 2,
+    "hide-empty-text": true,
+    "tooltip": true,
+    "on-click": "$HOME/.config/waybar/scripts/island-ctl quick-actions",
+    "on-click-right": "$HOME/.config/waybar/scripts/island-ctl menu",
+    "on-click-middle": "$HOME/.config/waybar/scripts/island-ctl media next",
+    "on-scroll-up": "$HOME/.config/waybar/scripts/island-ctl volume up",
+    "on-scroll-down": "$HOME/.config/waybar/scripts/island-ctl volume down"
+  }
 }

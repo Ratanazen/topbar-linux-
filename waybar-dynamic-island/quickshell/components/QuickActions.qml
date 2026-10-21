@@ -99,9 +99,13 @@ Column {
                         font.bold: true
                     }
                     Text {
-                        text: "Connected"
+                        text: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected)
+                              ? (IslandBridge.wifiStatus.ssid || "Connected")
+                              : "Disconnected"
                         color: Theme.textSecondary
                         font.pixelSize: 9
+                        elide: Text.ElideRight
+                        width: parent.parent.width - 48
                     }
                 }
             }
@@ -109,7 +113,7 @@ Column {
             HoverHandler { id: wifiHover }
             TapHandler {
                 onTapped: {
-                    IslandBridge.sendCommand("network", ["status"]);
+                    IslandBridge.openWifi();
                 }
             }
         }
@@ -154,7 +158,9 @@ Column {
                         font.bold: true
                     }
                     Text {
-                        text: IslandBridge.subtitle ? IslandBridge.subtitle.split("•")[0].trim() : "BlueZ Active"
+                        text: (IslandBridge.bluetoothDevices && IslandBridge.bluetoothDevices.length > 0 && IslandBridge.bluetoothDevices[0].connected)
+                              ? (IslandBridge.bluetoothDevices[0].name || "Connected")
+                              : (IslandBridge.bluetoothPowered ? "Ready" : "Off")
                         color: Theme.textSecondary
                         font.pixelSize: 9
                         elide: Text.ElideRight
@@ -166,7 +172,7 @@ Column {
             HoverHandler { id: btHover }
             TapHandler {
                 onTapped: {
-                    IslandBridge.sendCommand("bluetooth", ["scan"]);
+                    IslandBridge.openBluetooth();
                 }
             }
         }
@@ -311,7 +317,7 @@ Column {
     }
 
     // -------------------------------------------------------------
-    // HyperOS Section 3: 4 Quick Utility Tiles
+    // HyperOS Section 3: 5 Quick Utility Tiles
     // -------------------------------------------------------------
     Row {
         width: parent.width
@@ -319,7 +325,7 @@ Column {
 
         // 1. Pomodoro (25m)
         Rectangle {
-            width: (parent.width - 18) / 4
+            width: (parent.width - 24) / 5
             height: 32
             radius: 8
             color: pHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
@@ -342,7 +348,7 @@ Column {
 
         // 2. DND Toggle
         Rectangle {
-            width: (parent.width - 18) / 4
+            width: (parent.width - 24) / 5
             height: 32
             radius: 8
             color: dndHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
@@ -363,9 +369,42 @@ Column {
             }
         }
 
-        // 3. Cycle Theme
+        // 3. Next Wallpaper
         Rectangle {
-            width: (parent.width - 18) / 4
+            width: (parent.width - 24) / 5
+            height: 32
+            radius: 8
+            color: wallArea.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
+
+            Text {
+                anchors.centerIn: parent
+                text: "🖼️ Wall"
+                color: Theme.accentGreen
+                font.pixelSize: 9
+                font.bold: true
+            }
+            MouseArea {
+                id: wallArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: function(mouse) {
+                    if (mouse.button === Qt.RightButton) {
+                        IslandBridge.openWallpaperManager();
+                    } else {
+                        IslandBridge.nextWallpaper();
+                    }
+                }
+                onPressAndHold: {
+                    IslandBridge.openWallpaperManager();
+                }
+            }
+        }
+
+        // 4. Cycle Theme
+        Rectangle {
+            width: (parent.width - 24) / 5
             height: 32
             radius: 8
             color: thHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
@@ -395,9 +434,9 @@ Column {
             }
         }
 
-        // 4. Toggle Dock
+        // 5. Toggle Dock
         Rectangle {
-            width: (parent.width - 18) / 4
+            width: (parent.width - 24) / 5
             height: 32
             radius: 8
             color: dkHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground

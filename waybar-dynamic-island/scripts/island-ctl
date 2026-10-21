@@ -23,6 +23,8 @@ Usage:
     island-ctl task <add|done|next|clear|list> [title]
     island-ctl dnd toggle
     island-ctl theme <list|get|set> [name]
+    island-ctl wallpaper <next|prev|random|set <path>|get|list|gui>
+    island-ctl system-theme <next|prev|set <id>|get|list|gui>
     island-ctl position <top-center|top-left|top-right|get|set> [position]
     island-ctl profile <get|set> <low-resource|balanced|visual-quality>
     island-ctl windows <list|min|restore|style|target|manager|toggle> [args]
@@ -64,7 +66,7 @@ def send_ipc(command: str, args: dict = None) -> dict:
 
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.settimeout(3.0)
+        sock.settimeout(7.0)
         sock.connect(str(SOCKET_PATH))
         sock.sendall((json.dumps(payload) + "\n").encode("utf-8"))
 
@@ -410,9 +412,67 @@ def main():
                         print(f"  - 󰂱 {dev.get('name')} [{dev.get('mac')}]")
             else:
                 print(json.dumps(res, indent=2))
+        elif sub in ("toggle", "power"):
+            res = send_ipc("bluetooth_toggle")
+            print(f"Bluetooth adapter: {'Powered On' if res.get('powered') else 'Powered Off'}")
+        elif sub in ("ui", "open", "manager", "menu"):
+            res = send_ipc("bluetooth_ui")
+            print(res.get("message", "Showing Bluetooth manager"))
         else:
-            sys.stderr.write("Usage: island-ctl bluetooth <status|scan|connect|disconnect|devices> [device]\n")
+            sys.stderr.write("Usage: island-ctl bluetooth <status|scan|connect|disconnect|devices|toggle|ui> [device]\n")
             sys.exit(1)
+
+    elif cmd in ("wifi", "network", "wlan"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "status"
+        if sub in ("status", "get"):
+            res = send_ipc("wifi_status")
+            w = res.get("wifi", {})
+            print("==================================================")
+            print("  📶  Wi-Fi Connection Status")
+            print("==================================================")
+            print(f"  Radio Enabled:  {w.get('enabled')}")
+            print(f"  Connected:      {w.get('connected')}")
+            print(f"  SSID:           {w.get('ssid') or 'None'}")
+            print(f"  Signal:         {w.get('signal')}% {w.get('icon', '')}")
+            print(f"  Device:         {w.get('device') or 'N/A'}")
+            print("==================================================")
+        elif sub in ("scan", "list", "networks"):
+            print("Scanning nearby Wi-Fi networks...")
+            res = send_ipc("wifi_scan")
+            nets = res.get("networks", [])
+            print("==================================================")
+            print(f"  📶  Available Wi-Fi Networks ({len(nets)} found)")
+            print("==================================================")
+            for n in nets:
+                active_mark = "󰄲" if n.get("in_use") else " "
+                sec_icon = "󰌾" if n.get("is_secure") else " "
+                print(f"  [{active_mark}] {n.get('icon', '󰤨')} {n.get('ssid', ''):<24} {n.get('signal'):>3}% {sec_icon} {n.get('security', '')}")
+            print("==================================================")
+        elif sub == "connect":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl wifi connect <ssid> [password]\n")
+                sys.exit(1)
+            ssid = sys.argv[3]
+            pwd = sys.argv[4] if len(sys.argv) > 4 else ""
+            res = send_ipc("wifi_connect", {"ssid": ssid, "password": pwd})
+            print(res.get("message", "Connecting..."))
+        elif sub == "disconnect":
+            res = send_ipc("wifi_disconnect")
+            print(res.get("message", "Disconnecting..."))
+        elif sub in ("toggle", "power"):
+            res = send_ipc("wifi_toggle")
+            print(f"Wi-Fi radio: {'Enabled' if res.get('enabled') else 'Disabled'}")
+        elif sub in ("ui", "open", "manager", "menu"):
+            res = send_ipc("wifi_ui")
+            print(res.get("message", "Showing Wi-Fi manager"))
+        else:
+            sys.stderr.write("Usage: island-ctl wifi <status|scan|list|connect|disconnect|toggle|ui> [ssid] [password]\n")
+            sys.exit(1)
+
+    elif cmd in ("control", "control_center", "quick_actions", "quickactions", "quick-actions", "island", "toggle"):
+        res = send_ipc("quick_actions")
+        print(res.get("message", "Showing Quick Actions Control Center"))
+
 
     elif cmd == "volume":
         sub = sys.argv[2].lower() if len(sys.argv) > 2 else "up"
@@ -491,6 +551,75 @@ def main():
             print(res.get("message"))
             # Reload Waybar to pick up CSS theme class
             subprocess.run(["killall", "-SIGUSR2", "waybar"])
+
+    elif cmd in ("wallpaper", "wall"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "gui"
+        if sub in ("next", "cycle"):
+            res = send_ipc("wallpaper_next")
+            print(res.get("message", "Cycled next wallpaper"))
+        elif sub in ("prev", "previous"):
+            res = send_ipc("wallpaper_prev")
+            print(res.get("message", "Cycled prev wallpaper"))
+        elif sub in ("random", "rand"):
+            res = send_ipc("wallpaper_random")
+            print(res.get("message", "Applied random wallpaper"))
+        elif sub in ("get", "current"):
+            res = send_ipc("wallpaper_get")
+            print(f"Current wallpaper: {res.get('current', 'None')}")
+        elif sub in ("list", "all"):
+            res = send_ipc("wallpaper_list")
+            print("Available Wallpapers:")
+            for w in res.get("wallpapers", []):
+                print(f"  - {w}")
+        elif sub in ("set", "apply"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl wallpaper set <path>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("wallpaper_set", {"path": target})
+            if res.get("status") == "error":
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+            print(res.get("message"))
+        elif sub in ("gui", "open"):
+            res = send_ipc("wallpaper_gui")
+            print(res.get("message"))
+        else:
+            sys.stderr.write("Usage: island-ctl wallpaper <next|prev|random|set <path>|get|list|gui>\n")
+            sys.exit(1)
+
+    elif cmd in ("system-theme", "systheme"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "gui"
+        if sub in ("next", "cycle"):
+            res = send_ipc("system_theme_next")
+            print(res.get("message", "Switched next system theme"))
+        elif sub in ("prev", "previous"):
+            res = send_ipc("system_theme_prev")
+            print(res.get("message", "Switched prev system theme"))
+        elif sub in ("get", "current"):
+            res = send_ipc("system_theme_get")
+            print(f"Current system theme: {res.get('current', 'None')}")
+        elif sub in ("list", "all"):
+            res = send_ipc("system_theme_list")
+            print("Available System Themes:")
+            for t in res.get("themes", []):
+                print(f"  - {t}")
+        elif sub in ("set", "apply"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl system-theme set <theme_id>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("system_theme_set", {"theme": target})
+            if res.get("status") == "error":
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+            print(res.get("message"))
+        elif sub in ("gui", "open"):
+            res = send_ipc("system_theme_gui")
+            print(res.get("message"))
+        else:
+            sys.stderr.write("Usage: island-ctl system-theme <next|prev|set <id>|get|list|gui>\n")
+            sys.exit(1)
 
     elif cmd in ("reduced-motion", "motion"):
         sub = sys.argv[2].lower() if len(sys.argv) > 2 else "on"
@@ -750,7 +879,7 @@ def main():
                 print(res.get("message", f"Style set to {act}"))
             else:
                 res = send_ipc("window_style", {"subcommand": "get"})
-                print(f"Active minimize style: {res.get('style', 'scale')} (options: genie, scale, scale-fade, spring, reduced-motion, none)")
+                print(f"Active minimize style: {res.get('style', 'scale')} (options: lamp, genie, scale, scale-fade, spring, reduced-motion, none)")
         elif sub in ("target", "anim-target"):
             act = sys.argv[3].lower() if len(sys.argv) > 3 else "get"
             if act in ("set", "switch") and len(sys.argv) > 4:
@@ -820,7 +949,64 @@ def main():
             print("==================================================")
 
     elif cmd == "settings":
-        print_settings()
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub in ("get", "list", "show"):
+            res = send_ipc("settings_export")
+            if res.get("status") == "ok":
+                print("==================================================")
+                print("  ⚙  Ratana Dynamic Island — Configuration Settings")
+                print("==================================================")
+                s = res.get("settings", {})
+                for k, v in sorted(s.items()):
+                    print(f"  {k:<28} : {v}")
+                print("==================================================")
+                print("  Update via: island-ctl settings set <key> <value>")
+                print("==================================================")
+            else:
+                print_settings()
+        elif sub == "set":
+            if len(sys.argv) < 5:
+                sys.stderr.write("Usage: island-ctl settings set <key> <value>\n")
+                sys.exit(1)
+            key = sys.argv[3]
+            val = sys.argv[4]
+            res = send_ipc("settings_set", {"key": key, "val": val})
+            if res.get("status") == "ok":
+                print(f"[✓] {res.get('message')}")
+                subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+            else:
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+        elif sub in ("reset", "restore-defaults", "defaults"):
+            res = send_ipc("settings_reset")
+            if res.get("status") == "ok":
+                print(f"[✓] {res.get('message')}")
+                subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+            else:
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+        elif sub == "export":
+            res = send_ipc("settings_export")
+            print(json.dumps(res.get("settings", {}), indent=2))
+        elif sub == "import":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl settings import '<json_string>'\n")
+                sys.exit(1)
+            raw_json = sys.argv[3]
+            try:
+                data = json.loads(raw_json)
+                res = send_ipc("settings_import", {"settings": data})
+                print(res.get("message", "Settings imported"))
+                subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+            except Exception as e:
+                sys.stderr.write(f"Error parsing JSON: {e}\n")
+                sys.exit(1)
+        elif sub in ("ui", "panel", "open"):
+            res = send_ipc("settings_ui")
+            print(res.get("message", "Opened Settings UI"))
+        else:
+            sys.stderr.write("Usage: island-ctl settings <get | set <key> <val> | reset | export | import <json> | ui>\n")
+            sys.exit(1)
 
     elif cmd == "menu":
         launch_menu()

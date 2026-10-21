@@ -19,30 +19,70 @@ ShellRoot {
                 required property var modelData
                 screen: modelData
 
-                // Layer Shell Protocol Properties
-                WlrLayershell.layer: WlrLayer.Top
+                // Layer Shell Protocol Properties (Overlay guarantees clicks reach dynamic island over Waybar)
+                WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.namespace: "ratana-island"
-                WlrLayershell.keyboardFocus: (IslandBridge.userExpanded || IslandBridge.quickActionsOpen || IslandBridge.settingsOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+                WlrLayershell.keyboardFocus: (IslandBridge.userExpanded || IslandBridge.quickActionsOpen || IslandBridge.settingsOpen || IslandBridge.wifiOpen || IslandBridge.bluetoothOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
                 WlrLayershell.exclusionMode: ExclusionMode.Ignore
                 exclusionMode: ExclusionMode.Ignore
 
-                // Anchor to top edge with full width
+                readonly property bool isExpanded: IslandBridge.userExpanded ||
+                                                    IslandBridge.quickActionsOpen ||
+                                                    IslandBridge.settingsOpen ||
+                                                    IslandBridge.wifiOpen ||
+                                                    IslandBridge.bluetoothOpen ||
+                                                    IslandBridge.visualState === "quickActions" ||
+                                                    IslandBridge.visualState === "settings" ||
+                                                    IslandBridge.visualState === "wifi" ||
+                                                    IslandBridge.visualState === "bluetooth" ||
+                                                    IslandBridge.activeState === "share_picker"
+
+                // Anchor to top edge with full width (and bottom when expanded for full off-click dismiss area)
                 anchors.top: true
                 anchors.left: true
                 anchors.right: true
+                anchors.bottom: isExpanded
 
                 // Ample headroom for morphing expansions (sharePicker, minimizedApps, etc.)
-                implicitHeight: 380
+                implicitHeight: isExpanded ? (screen ? screen.height : 1080) : 380
                 color: "transparent"
 
-                // Wayland Input Mask: Clicks outside the active capsule pass through!
-                mask: Region {
+                // Wayland Input Mask: Clicks outside active capsule pass through in compact mode;
+                // when expanded, full window accepts clicks so off-clicks dismiss the popup!
+                mask: isExpanded ? null : compactMask
+
+                Region {
+                    id: compactMask
                     item: capsule
+                    Region {
+                        item: (accessoryPill && accessoryPill.visible) ? accessoryPill : null
+                    }
+                }
+
+                // Off-click backdrop: Clicking anywhere outside the expanded capsule dismisses it
+                MouseArea {
+                    id: offClickArea
+                    anchors.fill: parent
+                    visible: islandOverlay.isExpanded
+                    z: -1
+                    onClicked: {
+                        IslandBridge.dismiss();
+                    }
                 }
 
                 // Centered Morphological Dynamic Island Capsule
                 IslandCapsule {
                     id: capsule
+                    z: 1
+                }
+
+                // Apple Dynamic Island Split Accessory Pill (Secondary Activity Indicator)
+                AccessoryPill {
+                    id: accessoryPill
+                    anchors.left: capsule.right
+                    anchors.leftMargin: 8
+                    anchors.top: capsule.top
+                    anchors.topMargin: Math.max(0, (38 - height) / 2)
                 }
             }
         }
