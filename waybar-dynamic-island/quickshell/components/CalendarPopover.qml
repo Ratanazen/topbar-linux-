@@ -47,6 +47,7 @@ Rectangle {
                 color: Theme.textPrimary
                 font.pixelSize: 13
                 font.bold: true
+                font.family: Theme.fontFamily
             }
 
             Row {
@@ -106,6 +107,23 @@ Rectangle {
                             }
                         }
                     }
+                }
+
+                // Close Button
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: closeHover.hovered ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(1, 1, 1, 0.08)
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        color: Theme.textSecondary
+                        font.pixelSize: 10
+                    }
+                    HoverHandler { id: closeHover }
+                    TapHandler { onTapped: IslandBridge.dismiss() }
                 }
             }
         }

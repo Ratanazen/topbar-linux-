@@ -110,8 +110,8 @@ Column {
             Row {
                 anchors.centerIn: parent
                 spacing: 4
-                Text { text: "⚙"; color: Theme.textSecondary; font.pixelSize: 10 }
-                Text { text: "Settings"; color: Theme.textPrimary; font.pixelSize: 10; font.bold: true }
+                Text { text: "󰒓"; color: Theme.textSecondary; font.pixelSize: 11; font.family: Theme.fontFamily }
+                Text { text: "Settings"; color: Theme.textPrimary; font.pixelSize: 10; font.bold: true; font.family: Theme.fontFamily }
             }
 
             HoverHandler { id: act3Hov }

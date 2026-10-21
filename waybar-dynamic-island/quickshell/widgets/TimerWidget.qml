@@ -26,8 +26,10 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: "🍅"
-                font.pixelSize: 20
+                text: "󰔛"
+                color: "#ff453a"
+                font.pixelSize: 22
+                font.family: Theme.fontFamily
             }
         }
 

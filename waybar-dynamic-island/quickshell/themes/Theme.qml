@@ -37,7 +37,7 @@ QtObject {
                 return Qt.rgba(0.0, 0.0, 0.0, 1.0); // Pure OLED black
             case "macos-black":
             default:
-                return Qt.rgba(0.035, 0.035, 0.043, 0.96); // Apple obsidian #09090b
+                return Qt.rgba(0.04, 0.04, 0.06, 0.82); // Apple obsidian frosted glass #09090b
         }
     }
 
@@ -219,6 +219,12 @@ QtObject {
     readonly property color accentOrange: "#ff9f0a"
     readonly property color accentCyan: "#64d2ff"
 
+    // Authentic macOS Typography
+    readonly property string fontFamily: "SF Pro Text, SF Pro Display, -apple-system, system-ui, sans-serif"
+    readonly property string fontDisplay: "SF Pro Display, SF Pro Text, -apple-system, system-ui, sans-serif"
+    readonly property string fontMono: "JetBrainsMono Nerd Font, monospace"
+
     // Shadow
     readonly property color shadowColor: Qt.rgba(0, 0, 0, 0.65)
 }
+

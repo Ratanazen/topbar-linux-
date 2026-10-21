@@ -36,7 +36,8 @@ fi
 
 # Waybar JSON output
 if [ "$CURRENT_MODE" = "light" ]; then
-    echo '{"text":"󰖙","alt":"light","tooltip":"☀️ Light Mode Active\\nClick: Switch to Dark Mode","class":"light"}'
+    echo '{"text":"󰖙","alt":"light","tooltip":"󰖙 Light Mode Active\\nClick: Switch to Dark Mode","class":"light"}'
 else
-    echo '{"text":"󰖔","alt":"dark","tooltip":"🌙 Dark Mode Active\\nClick: Switch to Light Mode","class":"dark"}'
+    echo '{"text":"󰖔","alt":"dark","tooltip":"󰖔 Dark Mode Active\\nClick: Switch to Light Mode","class":"dark"}'
 fi
+

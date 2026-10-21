@@ -142,34 +142,34 @@ def launch_menu():
         sys.exit(1)
 
     items = [
-        "⏯  Play / Pause Media",
-        "⏭  Next Track",
-        "⏮  Previous Track",
-        "🍅  Start Pomodoro (25m Focus)",
-        "☕  Start Short Break (5m)",
-        "🌴  Start Long Break (15m)",
-        "⏸  Pause Active Timer",
-        "▶  Resume Paused Timer",
-        "⏹  Stop Active Timer / Stopwatch",
-        "🔕  Toggle Do Not Disturb",
-        "🎨  Theme: macos-black",
-        "🎨  Theme: macos-glass",
-        "🎨  Theme: hyperos-dark",
-        "🎨  Theme: originos-dark",
-        "🎨  Theme: catppuccin-mocha",
-        "🎨  Theme: minimal-dark",
-        "🗑  Dismiss Active Banner",
-        "⚙  Island Diagnostics Status"
+        "󰐊  Play / Pause Media",
+        "󰒭  Next Track",
+        "󰒮  Previous Track",
+        "󰔛  Start Pomodoro (25m Focus)",
+        "󰅶  Start Short Break (5m)",
+        "󰖕  Start Long Break (15m)",
+        "󰏤  Pause Active Timer",
+        "󰐊  Resume Paused Timer",
+        "󰓛  Stop Active Timer / Stopwatch",
+        "󰂛  Toggle Do Not Disturb",
+        "󰏘  Theme: macos-black",
+        "󰏘  Theme: macos-glass",
+        "󰏘  Theme: hyperos-dark",
+        "󰏘  Theme: originos-dark",
+        "󰏘  Theme: catppuccin-mocha",
+        "󰏘  Theme: minimal-dark",
+        "󰆴  Dismiss Active Banner",
+        "󰒓  Island Diagnostics Status"
     ]
     menu_input = "\n".join(items)
 
     try:
         if menu_type == "fuzzel":
-            cmd = ["fuzzel", "--dmenu", "--prompt", "🏝 Ratana Island: ", "--lines", "14", "--width", "36"]
+            cmd = ["fuzzel", "--dmenu", "--prompt", " Ratana Island: ", "--lines", "14", "--width", "36"]
         elif menu_type == "rofi":
-            cmd = ["rofi", "-dmenu", "-p", "🏝 Ratana Island", "-lines", "14", "-width", "32"]
+            cmd = ["rofi", "-dmenu", "-p", " Ratana Island", "-lines", "14", "-width", "32"]
         else:
-            cmd = ["wofi", "--dmenu", "--prompt", "🏝 Ratana Island", "--lines", "14", "--width", "340"]
+            cmd = ["wofi", "--dmenu", "--prompt", " Ratana Island", "--lines", "14", "--width", "340"]
 
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
         selected, _ = proc.communicate(input=menu_input)
@@ -240,7 +240,7 @@ def main():
         if res.get("status") == "ok":
             d = res["data"]
             print("==================================================")
-            print("  🏝️  Ratana Dynamic Island — Diagnostics Status")
+            print("    Ratana Dynamic Island — Diagnostics Status")
             print("==================================================")
             print(f"  Daemon Online:     {d.get('daemon_active')}")
             print(f"  Socket:            {d.get('socket_path')}")
@@ -428,7 +428,7 @@ def main():
             res = send_ipc("wifi_status")
             w = res.get("wifi", {})
             print("==================================================")
-            print("  📶  Wi-Fi Connection Status")
+            print("  󰤨  Wi-Fi Connection Status")
             print("==================================================")
             print(f"  Radio Enabled:  {w.get('enabled')}")
             print(f"  Connected:      {w.get('connected')}")
@@ -441,7 +441,7 @@ def main():
             res = send_ipc("wifi_scan")
             nets = res.get("networks", [])
             print("==================================================")
-            print(f"  📶  Available Wi-Fi Networks ({len(nets)} found)")
+            print(f"  󰤨  Available Wi-Fi Networks ({len(nets)} found)")
             print("==================================================")
             for n in nets:
                 active_mark = "󰄲" if n.get("in_use") else " "
@@ -718,7 +718,7 @@ def main():
         if res.get("status") == "ok":
             doc = res.get("doctor", {})
             print("==================================================")
-            print("  🩺  Ratana Dynamic Island — System Health Check")
+            print("    Ratana Dynamic Island — System Health Check")
             print("==================================================")
             print(f"  Daemon Status:       {'[✓] Online' if doc.get('daemon_online') else '[✗] Offline'}")
             print(f"  Socket:              {doc.get('socket')}")
@@ -833,7 +833,7 @@ def main():
             ipc_status = send_ipc("status")
             fe = ipc_status.get("data", {}).get("frontend", "waybar")
             print("==================================================")
-            print("  🏝️  Ratana Dynamic Island — Frontend Status")
+            print("    Ratana Dynamic Island — Frontend Status")
             print("==================================================")
             print(f"  Configured Frontend:  {fe}")
             print(f"  Quickshell Running:   {'[✓] yes' if res_qs.returncode == 0 else '[✗] no'}")
@@ -851,7 +851,7 @@ def main():
     elif cmd == "system":
         res = send_ipc("system")
         print("==================================================")
-        print("  ⚡  Ratana Dynamic Island — System Metrics")
+        print("  󰚥  Ratana Dynamic Island — System Metrics")
         print("==================================================")
         print(f"  CPU Usage:       {res.get('cpu_percent', 0.0)}%")
         print(f"  Memory Usage:    {res.get('memory_percent', 0.0)}%")
@@ -893,7 +893,7 @@ def main():
         if sub == "list":
             res = send_ipc("windows_list")
             print("==================================================")
-            print("  🪟  Sway / SwayFX Active Windows")
+            print("  󰖲  Sway / SwayFX Active Windows")
             print("==================================================")
             for w in res.get("windows", []):
                 st = "[Min/Scratch]" if w.get("minimized") else ("[Focused]" if w.get("focused") else "[Normal]")
@@ -976,7 +976,7 @@ def main():
         else:
             res = send_ipc("profile", {"subcommand": "get"})
             print("==================================================")
-            print("  ⚡  Ratana Island Performance Profile")
+            print("  󰚥  Ratana Island Performance Profile")
             print("==================================================")
             print(f"  Active Profile:         {res.get('profile', 'balanced').upper()}")
             print(f"  Idle Clock Interval:    {res.get('idle_clock_interval_s', 15.0)}s")
@@ -994,7 +994,7 @@ def main():
             res = send_ipc("settings_export")
             if res.get("status") == "ok":
                 print("==================================================")
-                print("  ⚙  Ratana Dynamic Island — Configuration Settings")
+                print("  󰒓  Ratana Dynamic Island — Configuration Settings")
                 print("==================================================")
                 s = res.get("settings", {})
                 for k, v in sorted(s.items()):

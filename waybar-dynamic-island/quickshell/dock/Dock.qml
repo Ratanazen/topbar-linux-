@@ -121,16 +121,16 @@ PanelWindow {
 
             // 6. Control Center (Dynamic Island)
             DockItem {
-                iconText: "🏝️"
-                tooltipText: "Dynamic Island Controls"
-                iconColor: Theme.textPrimary
+                iconText: "󰘳"
+                tooltipText: "Dynamic Island & Control Center"
+                iconColor: "#0a84ff"
                 onActivated: IslandBridge.toggleQuickActions()
             }
 
             // 7. System Settings
             DockItem {
-                iconText: "⚙"
-                tooltipText: "Settings"
+                iconText: "󰒓"
+                tooltipText: "System Settings"
                 iconColor: Theme.textSecondary
                 onActivated: IslandBridge.toggleSettings()
             }
@@ -189,6 +189,7 @@ PanelWindow {
                 text: itemRoot.iconText
                 color: itemRoot.iconColor
                 font.pixelSize: 18
+                font.family: Theme.fontFamily
             }
 
             HoverHandler { id: itemHover }
@@ -226,6 +227,7 @@ PanelWindow {
                     color: "#ffffff"
                     font.pixelSize: 10
                     font.bold: true
+                    font.family: Theme.fontFamily
                 }
             }
         }

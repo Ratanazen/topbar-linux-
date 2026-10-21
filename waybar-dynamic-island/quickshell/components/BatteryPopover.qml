@@ -23,36 +23,63 @@ Rectangle {
         spacing: 10
 
         // -------------------------------------------------------------
-        // Header: Battery Icon + Status
+        // Header: Battery Icon + Status & Close
         // -------------------------------------------------------------
-        Row {
+        Item {
             width: parent.width
             height: 24
-            spacing: 8
 
-            Text {
-                text: hasBattery ? (batteryPct > 20 ? "󰁹" : "󰂃") : "󰚥"
-                color: hasBattery ? (batteryPct > 20 ? Theme.accentGreen : Theme.accentRed) : Theme.accentCyan
-                font.pixelSize: 16
+            Row {
+                anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 1
+                spacing: 8
 
                 Text {
-                    text: hasBattery ? (batteryPct + "% Charged") : "Power Adapter Connected"
-                    color: Theme.textPrimary
-                    font.pixelSize: 12
-                    font.bold: true
+                    text: hasBattery ? (batteryPct > 20 ? "󰁹" : "󰂃") : "󰚥"
+                    color: hasBattery ? (batteryPct > 20 ? Theme.accentGreen : Theme.accentRed) : Theme.accentCyan
+                    font.pixelSize: 16
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 1
+
+                    Text {
+                        text: hasBattery ? (batteryPct + "% Charged") : "Power Adapter Connected"
+                        color: Theme.textPrimary
+                        font.pixelSize: 12
+                        font.bold: true
+                        font.family: Theme.fontFamily
+                    }
+
+                    Text {
+                        text: hasBattery ? "Power Source: Battery" : "Power Source: AC Power"
+                        color: Theme.textSecondary
+                        font.pixelSize: 10
+                        font.family: Theme.fontFamily
+                    }
+                }
+            }
+
+            // Close Button
+            Rectangle {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: 22
+                height: 22
+                radius: 11
+                color: closeHover.hovered ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(1, 1, 1, 0.08)
+
                 Text {
-                    text: hasBattery ? "Power Source: Battery" : "Power Source: AC Power"
+                    anchors.centerIn: parent
+                    text: "✕"
                     color: Theme.textSecondary
                     font.pixelSize: 10
                 }
+
+                HoverHandler { id: closeHover }
+                TapHandler { onTapped: IslandBridge.dismiss() }
             }
         }
 

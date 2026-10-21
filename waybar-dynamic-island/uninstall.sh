@@ -60,7 +60,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${BLUE}====================================================${NC}"
-echo -e "${BLUE}   🗑️  Ratana Dynamic Island — Uninstaller          ${NC}"
+echo -e "${BLUE}   [x] Ratana Dynamic Island — Uninstaller          ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 # 1. Stop active services and processes
@@ -160,7 +160,7 @@ fi
 
 # 5. Instructions for cleaning Waybar configs
 echo -e "\n${GREEN}====================================================${NC}"
-echo -e "${GREEN}   ✅ Ratana Dynamic Island Successfully Removed!  ${NC}"
+echo -e "${GREEN}   [✓] Ratana Dynamic Island Successfully Removed!  ${NC}"
 echo -e "${GREEN}====================================================${NC}"
 echo -e "Optional cleanup steps:"
 echo -e "1. Remove 'custom/island' from modules-center in: ${BLUE}$WAYBAR_CONFIG_DIR/config.jsonc${NC}"

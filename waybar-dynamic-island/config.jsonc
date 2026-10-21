@@ -120,7 +120,7 @@
       "(.*) - kitty": "󰄛 $1",
       "(.*) - Foot": "󰄛 $1",
       "(.*) - Spotify": " $1",
-      "(.*)cbonsai(.*)": "👻 cbonsai --screensave ~",
+      "(.*)cbonsai(.*)": "󰊠 cbonsai --screensave ~",
       "^$": " Desktop"
     }
   },
@@ -238,20 +238,20 @@
 
   "custom/theme": {
     "format": "󰔎",
-    "tooltip-format": "🎨 Theme Changer\nLeft-click: Open Theme Manager\nRight-click: Quick Menu",
+    "tooltip-format": "󰏘 Theme Changer\nLeft-click: Open Theme Manager\nRight-click: Quick Menu",
     "on-click": "python3 ~/.config/sway/scripts/theme_manager.py",
     "on-click-right": "python3 ~/.config/sway/scripts/theme_manager.py --menu"
   },
 
   "custom/wallpaper": {
     "format": "󰸉",
-    "tooltip-format": "🖼️ Wallpaper Manager\nLeft-click: Change, Add &amp; Delete Wallpapers",
+    "tooltip-format": "󰸉 Wallpaper Manager\nLeft-click: Change, Add &amp; Delete Wallpapers",
     "on-click": "python3 ~/.config/sway/scripts/wallpaper_manager_gui.py"
   },
 
   "custom/function": {
     "format": "󰘳",
-    "tooltip-format": "⚡ Quick Functions\nLeft-click: Quick Menu\nRight-click: Theme Changer",
+    "tooltip-format": "󰘳 Quick Functions\nLeft-click: Quick Menu\nRight-click: Theme Changer",
     "on-click": "bash ~/.config/waybar/scripts/function_menu.sh",
     "on-click-right": "python3 ~/.config/sway/scripts/theme_manager.py"
   },

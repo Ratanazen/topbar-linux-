@@ -6,8 +6,8 @@ OPTIONS="󰚰 System Update (garuda-update)
 󰖔 Toggle Dark / Light Mode
 󰸉 Change Wallpaper
 󰔎 Change Theme
-🏝️ Dynamic Island: Control Center
-🪔 Dynamic Island: Magic Lamp Style
+󰘳 Dynamic Island: Control Center
+󰚩 Dynamic Island: Magic Lamp Style
 󰌾 Lock Screen
 󰤄 Sleep (Suspend)
 󰈐 Fan: Quiet Mode
@@ -21,7 +21,7 @@ OPTIONS="󰚰 System Update (garuda-update)
 󰕾 Audio & Volume (Pavucontrol)
 󰐥 Power Options"
 
-SELECTION=$(echo -e "$OPTIONS" | fuzzel --dmenu -l 18 -w 34 -p "⚡ Quick Functions: ")
+SELECTION=$(echo -e "$OPTIONS" | fuzzel --dmenu -l 18 -w 34 -p "󰘳 Quick Functions: ")
 
 case "$SELECTION" in
     *"System Update"*)
@@ -41,7 +41,7 @@ case "$SELECTION" in
         ;;
     *"Magic Lamp Style"*)
         island-ctl windows style lamp &
-        notify-send -u low "Dynamic Island" "Animation style set to Magic Lamp 🪔"
+        notify-send -u low "Dynamic Island" "Animation style set to Magic Lamp"
         ;;
     *"Lock Screen"*)
         bash "$HOME/.config/sway/scripts/lock_screen.sh" &

@@ -79,6 +79,24 @@ PanelWindow {
         border.color: Theme.border
         border.width: 1
 
+        // Top specular highlight rim (authentic macOS Tahoe glass edge)
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: Qt.rgba(1, 1, 1, 0.14)
+        }
+
+        // Bottom subtle border edge
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: Qt.rgba(0, 0, 0, 0.30)
+        }
+
         // Top bar inner items row
         Item {
             anchors.fill: parent
@@ -97,15 +115,16 @@ PanelWindow {
                 // System Logo / Apple Icon
                 Rectangle {
                     width: 22
-                    height: parent.height
-                    color: (appleHover.hovered || IslandBridge.systemMenuOpen) ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+                    height: 22
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: (appleHover.hovered || IslandBridge.systemMenuOpen) ? Qt.rgba(1, 1, 1, 0.16) : "transparent"
                     radius: 4
 
                     Text {
                         anchors.centerIn: parent
-                        text: "" // Arch Linux / macOS Tahoe Symbolic Logo
+                        text: ""
                         color: Theme.textPrimary
-                        font.pixelSize: 14
+                        font.pixelSize: 15
                     }
 
                     HoverHandler { id: appleHover }
@@ -123,6 +142,7 @@ PanelWindow {
                     color: Theme.textPrimary
                     font.pixelSize: 12
                     font.bold: true
+                    font.family: Theme.fontFamily
                     anchors.verticalCenter: parent.verticalCenter
                     elide: Text.ElideRight
                     maximumLineCount: 1
@@ -151,6 +171,7 @@ PanelWindow {
                                 text: modelData
                                 color: Theme.textPrimary
                                 font.pixelSize: 12
+                                font.family: Theme.fontFamily
                             }
 
                             HoverHandler { id: mHover }
@@ -210,6 +231,7 @@ PanelWindow {
                             color: Theme.textPrimary
                             font.pixelSize: 11
                             font.bold: true
+                            font.family: Theme.fontFamily
                         }
                     }
                     HoverHandler { id: lanHover }
@@ -372,6 +394,7 @@ PanelWindow {
                             text: IslandBridge.deviceBattery !== null ? (IslandBridge.deviceBattery + "%") : "100%"
                             color: Theme.textPrimary
                             font.pixelSize: 11
+                            font.family: Theme.fontFamily
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
@@ -483,6 +506,7 @@ PanelWindow {
                         color: Theme.textPrimary
                         font.pixelSize: 12
                         font.bold: true
+                        font.family: Theme.fontFamily
                     }
 
                     HoverHandler { id: clockHover }
@@ -595,6 +619,7 @@ PanelWindow {
                             text: modelData.label
                             color: amHover.hovered ? "#ffffff" : Theme.textPrimary
                             font.pixelSize: 11
+                            font.family: Theme.fontFamily
                             anchors.left: parent.left
                             anchors.verticalCenter: parent.verticalCenter
                         }
@@ -603,6 +628,7 @@ PanelWindow {
                             text: modelData.sc
                             color: amHover.hovered ? Qt.rgba(1, 1, 1, 0.7) : Theme.textSecondary
                             font.pixelSize: 10
+                            font.family: Theme.fontFamily
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
                         }

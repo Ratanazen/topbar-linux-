@@ -433,9 +433,16 @@ Column {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     anchors.left: parent.left
-                    width: parent.width * 0.65
+                    width: Math.max(34, Math.min(parent.width, parent.width * (IslandBridge.progressPct > 0 ? IslandBridge.progressPct : 0.65)))
                     radius: 14
-                    color: Qt.rgba(1, 1, 1, 0.82)
+                    color: Qt.rgba(1, 1, 1, 0.88)
+
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: IslandBridge.reducedMotion ? 0 : 80
+                            easing.type: Easing.OutQuad
+                        }
+                    }
                 }
 
                 // Left speaker icon
@@ -443,8 +450,8 @@ Column {
                     anchors.left: parent.left
                     anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "󰕾"
-                    color: "#007AFF"
+                    text: IslandBridge.title === "Muted" ? "󰝟" : (IslandBridge.icon || "󰕾")
+                    color: IslandBridge.title === "Muted" ? "#ff453a" : "#007AFF"
                     font.pixelSize: 16
                 }
 
@@ -458,6 +465,17 @@ Column {
                     font.pixelSize: 11
                     font.bold: true
                 }
+
+                // Percentage text
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Math.round((IslandBridge.progressPct > 0 ? IslandBridge.progressPct : 0.65) * 100) + "%"
+                    color: "#1c1c1e"
+                    font.pixelSize: 10
+                    font.bold: true
+                }
             }
 
             MouseArea {
@@ -466,7 +484,11 @@ Column {
                     if (wheel.angleDelta.y > 0) IslandBridge.volumeUp();
                     else IslandBridge.volumeDown();
                 }
-                onClicked: IslandBridge.toggleAudioPopover()
+                onClicked: function(mouse) {
+                    var pct = Math.max(0, Math.min(1.0, mouse.x / parent.width));
+                    var intPct = Math.round(pct * 100);
+                    IslandBridge.sendCommand("volume_up", [intPct + "%"]);
+                }
             }
         }
     }

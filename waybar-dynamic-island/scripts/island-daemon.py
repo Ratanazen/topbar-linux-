@@ -1392,7 +1392,7 @@ class DynamicIslandDaemon:
                     source="settings",
                     state="settings",
                     priority=Priority.SETTINGS,
-                    icon="⚙",
+                    icon="󰒓",
                     title="Preferences & Themes",
                     subtitle="Tahoe / Glass / OLED",
                     css_class="settings",

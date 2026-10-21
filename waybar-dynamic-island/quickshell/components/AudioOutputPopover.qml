@@ -43,47 +43,74 @@ Rectangle {
                     color: Theme.textPrimary
                     font.pixelSize: 13
                     font.bold: true
+                    font.family: Theme.fontFamily
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
 
-            Rectangle {
+            Row {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                width: muteText.implicitWidth + 14
-                height: 22
-                radius: 11
-                color: muteHover.hovered ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.08)
+                spacing: 6
 
-                Text {
-                    id: muteText
-                    anchors.centerIn: parent
-                    text: IslandBridge.title === "Muted" ? "Unmute" : (IslandBridge.title || "Mute")
-                    color: IslandBridge.title === "Muted" ? Theme.accentRed : Theme.textPrimary
-                    font.pixelSize: 10
-                    font.bold: true
+                // Mute / Unmute pill
+                Rectangle {
+                    width: muteText.implicitWidth + 14
+                    height: 22
+                    radius: 11
+                    color: muteHover.hovered ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(1, 1, 1, 0.08)
+
+                    Text {
+                        id: muteText
+                        anchors.centerIn: parent
+                        text: IslandBridge.title === "Muted" ? "Unmute" : (IslandBridge.title || "Mute")
+                        color: IslandBridge.title === "Muted" ? Theme.accentRed : Theme.textPrimary
+                        font.pixelSize: 10
+                        font.bold: true
+                    }
+
+                    HoverHandler { id: muteHover }
+                    TapHandler { onTapped: IslandBridge.volumeMute() }
                 }
 
-                HoverHandler { id: muteHover }
-                TapHandler { onTapped: IslandBridge.volumeMute() }
+                // Close Button
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: closeHover.hovered ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(1, 1, 1, 0.08)
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        color: Theme.textSecondary
+                        font.pixelSize: 10
+                    }
+
+                    HoverHandler { id: closeHover }
+                    TapHandler { onTapped: IslandBridge.dismiss() }
+                }
             }
         }
 
         // -------------------------------------------------------------
-        // Interactive Volume Slider Bar
+        // Interactive Volume Slider Bar (macOS Pill Slider)
         // -------------------------------------------------------------
         Rectangle {
             id: sliderTrack
             width: parent.width
-            height: 18
-            radius: 9
-            color: Qt.rgba(1, 1, 1, 0.10)
+            height: 32
+            radius: 12
+            color: Qt.rgba(1, 1, 1, 0.12)
+            clip: true
 
             Rectangle {
-                height: parent.height
-                radius: 9
-                width: Math.max(18, Math.min(parent.width, parent.width * IslandBridge.progressPct))
-                color: Theme.accent
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                radius: 12
+                width: Math.max(32, Math.min(parent.width, parent.width * (IslandBridge.progressPct > 0 ? IslandBridge.progressPct : 0.65)))
+                color: Qt.rgba(1, 1, 1, 0.88)
 
                 Behavior on width {
                     NumberAnimation {
@@ -91,15 +118,28 @@ Rectangle {
                         easing.type: Easing.OutQuad
                     }
                 }
+            }
 
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.left: parent.left
-                    anchors.leftMargin: 6
-                    text: "󰕾"
-                    color: "#ffffff"
-                    font.pixelSize: 10
-                }
+            // Left speaker icon in Apple blue
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: 10
+                text: IslandBridge.title === "Muted" ? "󰝟" : (IslandBridge.icon || "󰕾")
+                color: IslandBridge.title === "Muted" ? "#ff453a" : "#007AFF"
+                font.pixelSize: 15
+            }
+
+            // Percentage text right-aligned
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                text: Math.round(IslandBridge.progressPct * 100) + "%"
+                color: "#1c1c1e"
+                font.pixelSize: 11
+                font.bold: true
+                font.family: Theme.fontFamily
             }
 
             MouseArea {
@@ -108,6 +148,10 @@ Rectangle {
                     var pct = Math.max(0, Math.min(1.0, mouse.x / parent.width));
                     var intPct = Math.round(pct * 100);
                     IslandBridge.sendCommand("volume_up", [intPct + "%"]);
+                }
+                onWheel: wheel => {
+                    if (wheel.angleDelta.y > 0) IslandBridge.volumeUp();
+                    else IslandBridge.volumeDown();
                 }
             }
         }

@@ -15,7 +15,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}====================================================${NC}"
-echo -e "${BLUE}   🏝️  Ratana Dynamic Island V2 — Installer         ${NC}"
+echo -e "${BLUE}     Ratana Dynamic Island V2 — Installer         ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -206,11 +206,11 @@ echo -e "  [✓] Copied island.service to $SYSTEMD_USER_DIR"
 # 5. INTEGRATION INSTRUCTIONS
 # -----------------------------------------------------------------------------
 echo -e "\n${GREEN}====================================================${NC}"
-echo -e "${GREEN}   ✅ Installation Completed Successfully!          ${NC}"
+echo -e "${GREEN}   [✓] Installation Completed Successfully!          ${NC}"
 echo -e "${GREEN}====================================================${NC}"
 
 if [ "$FRONTEND_CHOICE" != "quickshell" ]; then
-    echo -e "🔹 ${BLUE}Waybar Lite Edition Setup:${NC}"
+    echo -e "• ${BLUE}Waybar Lite Edition Setup:${NC}"
     echo -e "   1. Add 'custom/island' to 'modules-center' in: $WAYBAR_CONFIG_DIR/config.jsonc"
     echo -e "   2. Append $SCRIPT_DIR/style.css to: $WAYBAR_CONFIG_DIR/style.css"
     echo -e "   3. Reload Waybar: ${GREEN}killall -SIGUSR2 waybar${NC}"
@@ -218,7 +218,7 @@ if [ "$FRONTEND_CHOICE" != "quickshell" ]; then
 fi
 
 if [ "$FRONTEND_CHOICE" != "waybar" ]; then
-    echo -e "🔹 ${BLUE}Quickshell Pro Edition Setup (Standalone Overlay):${NC}"
+    echo -e "• ${BLUE}Quickshell Pro Edition Setup (Standalone Overlay):${NC}"
     echo -e "   1. Set frontend:   ${GREEN}island-ctl frontend quickshell${NC}"
     echo -e "   2. Launch overlay: ${GREEN}island-ctl frontend start quickshell${NC}"
     echo -e "   3. Autostart in ~/.config/sway/config:"
@@ -226,7 +226,7 @@ if [ "$FRONTEND_CHOICE" != "waybar" ]; then
     echo -e ""
 fi
 
-echo -e "🔹 ${BLUE}Useful CLI Commands:${NC}"
+echo -e "• ${BLUE}Useful CLI Commands:${NC}"
 echo -e "   ${GREEN}island-ctl status${NC}                # System diagnostics"
 echo -e "   ${GREEN}island-ctl bluetooth status${NC}      # Real Bluetooth state"
 echo -e "   ${GREEN}island-ctl bluetooth scan${NC}        # Discover devices"

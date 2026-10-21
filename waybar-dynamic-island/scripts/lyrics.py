@@ -270,7 +270,7 @@ async def main():
                 time_str += f"/{format_time(state.duration)}"
                 prog_bar = " " + make_progress_bar(state.position, state.duration, 8)
                 
-            full_text = f"🎵 [{time_str}]{prog_bar} {text}"
+            full_text = f"󰎆 [{time_str}]{prog_bar} {text}"
             if len(full_text) > 60: full_text = full_text[:57] + "..."
                 
             tooltip = f"{artist} - {title}\nAlbum: {state.album or 'Unknown'}\n\n{manager.full_lyrics_text}"

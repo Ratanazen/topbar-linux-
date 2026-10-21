@@ -31,13 +31,13 @@ fi
 
 # Set icon and class based on status
 if [[ "$status" == "Playing" ]]; then
-    icon="▶"
+    icon="󰐊"
     class="playing"
 elif [[ "$status" == "Paused" ]]; then
-    icon="⏸"
+    icon="󰏤"
     class="paused"
 else
-    icon="⏹"
+    icon="󰓛"
     class="stopped"
     jq -n -c '{"text": "", "tooltip": "", "class": "stopped"}'
     exit 0
@@ -50,9 +50,9 @@ fi
 
 # Format text
 if [[ -n "$artist" ]]; then
-    text="$icon 🎵 $artist - $title"
+    text="$icon 󰎆 $artist - $title"
 else
-    text="$icon 🎵 $title"
+    text="$icon 󰎆 $title"
 fi
 
 # Truncate text (max 40 chars)

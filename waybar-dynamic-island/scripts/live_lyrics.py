@@ -254,7 +254,7 @@ async def main():
             else:
                 text = title
                 
-            full_text = f"🎵 {text}"
+            full_text = f"󰎆 {text}"
             if len(full_text) > 50: full_text = full_text[:47] + "..."
                 
             tooltip = f"Title: {title}\nArtist: {artist}\nAlbum: {state.album or 'Unknown'}\n\n{manager.full_lyrics_text}"
