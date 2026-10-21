@@ -1,0 +1,800 @@
+#!/usr/bin/env python3
+"""
+island-ctl — Ratana Dynamic Island CLI & Control Interface
+==========================================================
+Unified control client conforming to Sections 6, 9, 10, and 15.
+
+Usage:
+    island-ctl status
+    island-ctl frontend <waybar|quickshell|both|get|set|start|stop|status>
+    island-ctl bluetooth <status|scan|connect|disconnect|devices> [device]
+    island-ctl media <status|toggle|next|prev>
+    island-ctl volume <up|down|mute>
+    island-ctl brightness <up|down>
+    island-ctl network status
+    island-ctl recording status
+    island-ctl motion <reduced|normal|on|off>
+    island-ctl event --title "Title" [--message "Body"] [--duration 3] [--state system] [--priority 40]
+    island-ctl dismiss
+    island-ctl timer <25m|10s|1h|start|pause|resume|stop> [label]
+    island-ctl pomodoro [start|pause|resume|stop]
+    island-ctl stopwatch
+    island-ctl stop
+    island-ctl task <add|done|next|clear|list> [title]
+    island-ctl dnd toggle
+    island-ctl theme <list|get|set> [name]
+    island-ctl settings
+    island-ctl menu
+    island-ctl stream
+"""
+
+import argparse
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+RUNTIME_DIR = Path(os.environ.get("XDG_RUNTIME_DIR", f"/tmp/runtime-{os.getuid()}"))
+SOCKET_PATH = RUNTIME_DIR / "ratana-island.sock"
+CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "ratana-island" / "config.ini"
+
+
+def send_ipc(command: str, args: dict = None) -> dict:
+    """Send JSON request to daemon socket with 3.0s timeout."""
+    if not SOCKET_PATH.exists():
+        sys.stderr.write(
+            f"island-ctl: Daemon socket not found at {SOCKET_PATH}.\n"
+            f"Start daemon via: ~/.config/waybar/scripts/island-daemon.py\n"
+            f"Or check Waybar process status: pgrep -a waybar\n"
+        )
+        sys.exit(1)
+
+    payload = {
+        "version": 1,
+        "command": command,
+        "args": args or {}
+    }
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(3.0)
+        sock.connect(str(SOCKET_PATH))
+        sock.sendall((json.dumps(payload) + "\n").encode("utf-8"))
+
+        response_raw = ""
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            response_raw += chunk.decode("utf-8", errors="replace")
+            if "\n" in response_raw:
+                break
+        sock.close()
+
+        if response_raw:
+            return json.loads(response_raw.strip())
+        return {"version": 1, "status": "error", "message": "Empty response from daemon"}
+    except socket.timeout:
+        sys.stderr.write("island-ctl: Socket timeout communicating with daemon.\n")
+        sys.exit(1)
+    except ConnectionRefusedError:
+        sys.stderr.write(f"island-ctl: Connection refused at {SOCKET_PATH}. Stale socket?\n")
+        sys.exit(1)
+    except Exception as e:
+        sys.stderr.write(f"island-ctl: IPC error: {e}\n")
+        sys.exit(1)
+
+
+def stream_daemon():
+    """Stream continuous JSON to stdout for Waybar custom module."""
+    if not SOCKET_PATH.exists():
+        sys.stderr.write(f"island-ctl stream: Daemon socket {SOCKET_PATH} not found.\n")
+        sys.exit(1)
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(str(SOCKET_PATH))
+        sock.sendall(b"stream\n")
+
+        buf = ""
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            buf += chunk.decode("utf-8", errors="replace")
+            while "\n" in buf:
+                line, buf = buf.split("\n", 1)
+                if line:
+                    sys.stdout.write(line + "\n")
+                    sys.stdout.flush()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        sys.stderr.write(f"island-ctl stream error: {e}\n")
+        sys.exit(1)
+
+
+def launch_menu():
+    """Launch quick actions menu using fuzzel, rofi, or wofi (Feature C)."""
+    menu_bin = None
+    menu_type = None
+
+    if shutil.which("fuzzel"):
+        menu_bin = "fuzzel"
+        menu_type = "fuzzel"
+    elif shutil.which("rofi"):
+        menu_bin = "rofi"
+        menu_type = "rofi"
+    elif shutil.which("wofi"):
+        menu_bin = "wofi"
+        menu_type = "wofi"
+    else:
+        sys.stderr.write("island-ctl: No menu launcher found. Please install fuzzel, rofi, or wofi.\n")
+        sys.exit(1)
+
+    items = [
+        "⏯  Play / Pause Media",
+        "⏭  Next Track",
+        "⏮  Previous Track",
+        "🍅  Start Pomodoro (25m Focus)",
+        "☕  Start Short Break (5m)",
+        "🌴  Start Long Break (15m)",
+        "⏸  Pause Active Timer",
+        "▶  Resume Paused Timer",
+        "⏹  Stop Active Timer / Stopwatch",
+        "🔕  Toggle Do Not Disturb",
+        "🎨  Theme: macos-black",
+        "🎨  Theme: macos-glass",
+        "🎨  Theme: hyperos-dark",
+        "🎨  Theme: originos-dark",
+        "🎨  Theme: catppuccin-mocha",
+        "🎨  Theme: minimal-dark",
+        "🗑  Dismiss Active Banner",
+        "⚙  Island Diagnostics Status"
+    ]
+    menu_input = "\n".join(items)
+
+    try:
+        if menu_type == "fuzzel":
+            cmd = ["fuzzel", "--dmenu", "--prompt", "🏝 Ratana Island: ", "--lines", "14", "--width", "36"]
+        elif menu_type == "rofi":
+            cmd = ["rofi", "-dmenu", "-p", "🏝 Ratana Island", "-lines", "14", "-width", "32"]
+        else:
+            cmd = ["wofi", "--dmenu", "--prompt", "🏝 Ratana Island", "--lines", "14", "--width", "340"]
+
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        selected, _ = proc.communicate(input=menu_input)
+        selected = selected.strip()
+
+        if not selected:
+            return
+
+        if "Play / Pause" in selected:
+            send_ipc("media_toggle")
+        elif "Next Track" in selected:
+            send_ipc("media_next")
+        elif "Previous Track" in selected:
+            send_ipc("media_prev")
+        elif "Pomodoro" in selected:
+            send_ipc("pomodoro")
+        elif "Short Break" in selected:
+            send_ipc("timer_start", {"duration": "5m", "label": "Break"})
+        elif "Long Break" in selected:
+            send_ipc("timer_start", {"duration": "15m", "label": "LongBreak"})
+        elif "Pause Active Timer" in selected:
+            send_ipc("timer_pause")
+        elif "Resume Paused Timer" in selected:
+            send_ipc("timer_resume")
+        elif "Stop Active Timer" in selected:
+            send_ipc("stop")
+        elif "Do Not Disturb" in selected:
+            send_ipc("dnd_toggle")
+        elif "Theme: macos-black" in selected:
+            send_ipc("theme_set", {"theme": "macos-black"})
+        elif "Theme: macos-glass" in selected:
+            send_ipc("theme_set", {"theme": "macos-glass"})
+        elif "Theme: hyperos-dark" in selected:
+            send_ipc("theme_set", {"theme": "hyperos-dark"})
+        elif "Theme: originos-dark" in selected:
+            send_ipc("theme_set", {"theme": "originos-dark"})
+        elif "Theme: catppuccin-mocha" in selected:
+            send_ipc("theme_set", {"theme": "catppuccin-mocha"})
+        elif "Theme: minimal-dark" in selected:
+            send_ipc("theme_set", {"theme": "minimal-dark"})
+        elif "Dismiss" in selected:
+            send_ipc("dismiss")
+        elif "Status" in selected:
+            res = send_ipc("status")
+            print(json.dumps(res, indent=2))
+    except Exception as e:
+        sys.stderr.write(f"island-ctl: Error showing menu: {e}\n")
+
+
+def print_settings():
+    """Display effective configuration."""
+    if not CONFIG_FILE.exists():
+        print(f"No config file found at {CONFIG_FILE}. Default configuration active.")
+        return
+    with open(CONFIG_FILE, "r") as f:
+        print(f.read())
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__.strip())
+        sys.exit(1)
+
+    cmd = sys.argv[1].lower()
+
+    if cmd == "status":
+        res = send_ipc("status")
+        if res.get("status") == "ok":
+            d = res["data"]
+            print("==================================================")
+            print("  🏝️  Ratana Dynamic Island — Diagnostics Status")
+            print("==================================================")
+            print(f"  Daemon Online:     {d.get('daemon_active')}")
+            print(f"  Socket:            {d.get('socket_path')}")
+            print(f"  Active State:      {d.get('active_state')} (Priority {d.get('active_priority')})")
+            print(f"  Active Title:      {d.get('active_title')}")
+            print(f"  Theme Preset:      {d.get('theme')}")
+            print(f"  Presentation Mode: {d.get('presentation_mode')}")
+            print(f"  Reduced Motion:    {d.get('reduced_motion')}")
+            print(f"  Compositor:        {d.get('compositor')}")
+            print("  Enabled Integrations:")
+            for k, v in d.get("enabled_integrations", {}).items():
+                print(f"    - {k:<15} {'[✓] enabled' if v else '[✗] disabled/absent'}")
+            print("==================================================")
+        else:
+            print(json.dumps(res, indent=2))
+
+    elif cmd == "event":
+        # island-ctl event --title "..." --message "..." --duration 3 --state system --priority 40
+        parser = argparse.ArgumentParser(prog="island-ctl event")
+        parser.add_argument("--title", required=True, help="Event title")
+        parser.add_argument("--message", default="", help="Event message / subtitle")
+        parser.add_argument("--duration", type=float, default=3.0, help="Duration in seconds")
+        parser.add_argument("--state", default="system", help="Animation state name")
+        parser.add_argument("--priority", type=int, default=40, help="Priority (10-90)")
+        parser.add_argument("--icon", default="󰋼", help="Icon glyph")
+        args = parser.parse_args(sys.argv[2:])
+
+        res = send_ipc("event", {
+            "title": args.title,
+            "message": args.message,
+            "duration": args.duration,
+            "state": args.state,
+            "priority": args.priority,
+            "icon": args.icon
+        })
+        print(res.get("message", "Event dispatched"))
+
+    elif cmd == "timer":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "25m"
+        if sub == "pause":
+            res = send_ipc("timer_pause")
+        elif sub == "resume":
+            res = send_ipc("timer_resume")
+        elif sub == "stop":
+            res = send_ipc("timer_stop")
+        else:
+            label = " ".join(sys.argv[3:]) if len(sys.argv) > 3 else "Timer"
+            res = send_ipc("timer_start", {"duration": sub, "label": label})
+        if res.get("status") == "error":
+            sys.stderr.write(f"Error: {res.get('message')}\n")
+            sys.exit(1)
+        print(res.get("message", "Timer updated"))
+
+    elif cmd == "pomodoro":
+        res = send_ipc("pomodoro")
+        print(res.get("message", "Pomodoro started"))
+
+    elif cmd == "stopwatch":
+        res = send_ipc("stopwatch")
+        print(res.get("message", "Stopwatch started"))
+
+    elif cmd == "stop":
+        res = send_ipc("stop")
+        print(res.get("message", "Stopped"))
+
+    elif cmd == "dismiss":
+        res = send_ipc("dismiss")
+        print(res.get("message", "Dismissed"))
+
+    elif cmd == "media":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "toggle"
+        if sub in ("toggle", "play-pause"):
+            res = send_ipc("media_toggle")
+        elif sub == "next":
+            res = send_ipc("media_next")
+        elif sub == "prev":
+            res = send_ipc("media_prev")
+        else:
+            sys.stderr.write(f"Unknown media action: {sub}\n")
+            sys.exit(1)
+        print(res.get("message", "Media action sent"))
+
+    elif cmd == "task":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "list"
+        if sub in ("add", "new"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl task add <title>\n")
+                sys.exit(1)
+            title = " ".join(sys.argv[3:])
+            res = send_ipc("task_add", {"title": title})
+            print(res.get("message", "Task added"))
+        elif sub in ("done", "complete", "finish"):
+            res = send_ipc("task_done")
+            print(res.get("message", "Task completed"))
+        elif sub in ("next", "skip"):
+            res = send_ipc("task_next")
+            print(res.get("message", "Switched task"))
+        elif sub in ("clear", "clean"):
+            res = send_ipc("task_clear")
+            print(res.get("message", "Cleared tasks"))
+        elif sub in ("list", "show"):
+            res = send_ipc("task_list")
+            tasks = res.get("tasks", [])
+            if not tasks:
+                print("No tasks found. Add one with: island-ctl task add <title>")
+            else:
+                print("Tasks:")
+                for idx, t in enumerate(tasks, 1):
+                    status = "[✓]" if t.get("done") else "[ ]"
+                    print(f"  {idx}. {status} {t.get('title')}")
+        else:
+            sys.stderr.write("Usage: island-ctl task <add|done|next|clear|list> [title]\n")
+            sys.exit(1)
+
+    elif cmd in ("bluetooth", "bt"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "status"
+        if sub in ("status", "info"):
+            res = send_ipc("bluetooth_status")
+            if res.get("status") == "ok":
+                d = res.get("data", {})
+                print("==================================================")
+                print("  󰂯  Ratana Dynamic Island — Bluetooth Status")
+                print("==================================================")
+                print(f"  Backend:           {d.get('backend')}")
+                print(f"  Adapter Powered:   {'[✓] yes' if d.get('adapter_powered') else '[✗] no'}")
+                print(f"  Discovering:       {'[✓] yes' if d.get('discovering') else '[✗] no'}")
+                print(f"  State:             {d.get('state')}")
+                conn = d.get("connected_devices", [])
+                if conn:
+                    print("  Connected Devices:")
+                    for dev in conn:
+                        bat = f" ({dev.get('battery')}%)" if dev.get('battery') is not None else ""
+                        print(f"    - 󰂱 {dev.get('name')} [{dev.get('mac')}]{bat}")
+                else:
+                    print("  Connected Devices: (none)")
+                paired = d.get("paired_devices", [])
+                if paired:
+                    print("  Paired Devices:")
+                    for dev in paired:
+                        print(f"    - {dev.get('name')} [{dev.get('mac')}]")
+                print("==================================================")
+            else:
+                print(json.dumps(res, indent=2))
+        elif sub == "scan":
+            dur = sys.argv[3] if len(sys.argv) > 3 else "10"
+            res = send_ipc("bluetooth_scan", {"params": ["scan", dur]})
+            print(res.get("message", "Scanning for Bluetooth devices..."))
+        elif sub == "connect":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl bluetooth connect <device_name_or_mac>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("bluetooth_connect", {"device": target, "params": ["connect", target]})
+            print(res.get("message", f"Connecting to {target}..."))
+        elif sub == "disconnect":
+            target = sys.argv[3] if len(sys.argv) > 3 else ""
+            res = send_ipc("bluetooth_disconnect", {"device": target, "params": ["disconnect", target]})
+            print(res.get("message", "Disconnecting..."))
+        elif sub in ("devices", "list"):
+            res = send_ipc("bluetooth_devices")
+            if res.get("status") == "ok":
+                print("Paired Bluetooth Devices:")
+                for dev in res.get("paired", []):
+                    print(f"  - {dev.get('name')} [{dev.get('mac')}]")
+                conn = res.get("connected", [])
+                if conn:
+                    print("\nConnected Devices:")
+                    for dev in conn:
+                        print(f"  - 󰂱 {dev.get('name')} [{dev.get('mac')}]")
+            else:
+                print(json.dumps(res, indent=2))
+        else:
+            sys.stderr.write("Usage: island-ctl bluetooth <status|scan|connect|disconnect|devices> [device]\n")
+            sys.exit(1)
+
+    elif cmd == "volume":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "up"
+        if sub in ("up", "+2%"):
+            res = send_ipc("volume_up")
+        elif sub in ("down", "-2%"):
+            res = send_ipc("volume_down")
+        elif sub in ("mute", "toggle"):
+            res = send_ipc("volume_mute")
+        else:
+            sys.stderr.write(f"Unknown volume action: {sub}\n")
+            sys.exit(1)
+        print(res.get("message", "Volume action sent"))
+
+    elif cmd in ("brightness", "bright"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "up"
+        if sub in ("up", "+5%"):
+            res = send_ipc("brightness_up")
+        elif sub in ("down", "-5%"):
+            res = send_ipc("brightness_down")
+        else:
+            sys.stderr.write(f"Unknown brightness action: {sub}\n")
+            sys.exit(1)
+        print(res.get("message", "Brightness action sent"))
+
+    elif cmd in ("network", "net"):
+        res = send_ipc("status")
+        if res.get("status") == "ok":
+            d = res.get("data", {})
+            print("==================================================")
+            print("  󰤨  Ratana Dynamic Island — Network Status")
+            print("==================================================")
+            print(f"  Current State:     {d.get('active_state')}")
+            print(f"  Network Enabled:   {d.get('enabled_integrations', {}).get('network')}")
+            print("==================================================")
+        else:
+            print(json.dumps(res, indent=2))
+
+    elif cmd in ("recording", "rec"):
+        res = send_ipc("status")
+        if res.get("status") == "ok":
+            d = res.get("data", {})
+            print("==================================================")
+            print("  󰻃  Ratana Dynamic Island — Recording Status")
+            print("==================================================")
+            print(f"  Recording Active:  {d.get('active_state') == 'recording'}")
+            print(f"  Active Title:      {d.get('active_title')}")
+            print("==================================================")
+        else:
+            print(json.dumps(res, indent=2))
+
+    elif cmd == "dnd":
+        res = send_ipc("dnd_toggle")
+        print(res.get("message", "DND toggled"))
+
+    elif cmd == "theme":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "list"
+        if sub == "list":
+            res = send_ipc("theme_list")
+            print("Available themes:")
+            for t in res.get("themes", []):
+                active = " (active)" if t == res.get("active") else ""
+                print(f"  - {t}{active}")
+        elif sub == "get":
+            res = send_ipc("theme_get")
+            print(f"Active theme: {res.get('active')}")
+        elif sub == "set":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl theme set <name>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("theme_set", {"theme": target})
+            if res.get("status") == "error":
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+            print(res.get("message"))
+            # Reload Waybar to pick up CSS theme class
+            subprocess.run(["killall", "-SIGUSR2", "waybar"])
+
+    elif cmd in ("reduced-motion", "motion"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "on"
+        is_on = sub in ("on", "true", "1", "reduced")
+        res = send_ipc("reduced_motion_set", {"enabled": is_on})
+        print(res.get("message"))
+        subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+
+    elif cmd == "mode":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub in ("get", "status"):
+            res = send_ipc("mode_get")
+            print(f"Active mode: {res.get('mode', 'waybar-enhanced')} (frontend={res.get('frontend')})")
+            print(f"Available modes: {', '.join(res.get('modes_available', ['waybar-lite', 'waybar-enhanced', 'quickshell', 'hybrid']))}")
+        elif sub in ("waybar-lite", "waybar-enhanced", "quickshell", "hybrid"):
+            res = send_ipc("mode_set", {"mode": sub})
+            if res.get("status") == "error":
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+            print(res.get("message"))
+            # Coordinate frontends
+            if sub in ("quickshell", "hybrid"):
+                if shutil.which("quickshell"):
+                    res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
+                    if res_qs.returncode != 0:
+                        qs_path = Path.home() / ".config" / "ratana-island" / "quickshell"
+                        if not qs_path.exists():
+                            qs_path = Path(__file__).resolve().parent.parent / "quickshell"
+                        subprocess.Popen(
+                            ["quickshell", "-p", str(qs_path)],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            start_new_session=True
+                        )
+                        print("Started Quickshell Dynamic Island overlay.")
+                else:
+                    sys.stderr.write("Warning: quickshell binary not found. Overlay could not be launched.\n")
+            elif sub in ("waybar-lite", "waybar-enhanced"):
+                subprocess.run(["pkill", "-f", "quickshell.*ratana-island"], capture_output=True)
+            subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+        else:
+            sys.stderr.write("Usage: island-ctl mode <waybar-lite | waybar-enhanced | quickshell | hybrid | get>\n")
+            sys.exit(1)
+
+    elif cmd in ("full", "show-full"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "toggle"
+        res = send_ipc("full_set", {"enabled": sub})
+        print(res.get("message"))
+        subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+
+    elif cmd in ("layout", "lan", "language"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub in ("next", "switch"):
+            res = send_ipc("layout_next")
+            print(res.get("message"))
+        elif sub in ("show", "pop"):
+            res = send_ipc("layout_show")
+            print(res.get("message"))
+        elif sub in ("mode", "format", "set"):
+            fmt = sys.argv[3].lower() if len(sys.argv) > 3 else "both"
+            res = send_ipc("layout_set", {"format": fmt})
+            print(res.get("message"))
+        elif sub == "get":
+            res = send_ipc("layout_get")
+            info = res.get("info", {})
+            print(f"Current Layout:  {res.get('layout')}")
+            print(f"Origin Script:   {info.get('origin')}")
+            print(f"Full Name:       {info.get('full')}")
+            print(f"Short Code:      {info.get('short')}")
+            print(f"Display Format:  {res.get('format')}")
+        else:
+            sys.stderr.write("Usage: island-ctl layout <next | get | show | mode [both|origin|full|short]>\n")
+            sys.exit(1)
+
+    elif cmd == "doctor":
+        res = send_ipc("doctor")
+        if res.get("status") == "ok":
+            doc = res.get("doctor", {})
+            print("==================================================")
+            print("  🩺  Ratana Dynamic Island — System Health Check")
+            print("==================================================")
+            print(f"  Daemon Status:       {'[✓] Online' if doc.get('daemon_online') else '[✗] Offline'}")
+            print(f"  Socket:              {doc.get('socket')}")
+            print(f"  Config:              {doc.get('config_path')}")
+            print(f"  Active Mode:         {doc.get('mode')}")
+            print(f"  Frontend:            {doc.get('frontend')}")
+            print(f"  Theme:               {doc.get('theme')}")
+            print(f"  Show Full:           {doc.get('show_full')}")
+            print(f"  Compositor:          {doc.get('compositor')}")
+            li = doc.get("layout_info", {})
+            print(f"  Current Layout:      {doc.get('current_layout')} ({li.get('origin')} • {li.get('full')})")
+            print("  Dependencies Audit:")
+            for dep, ok in doc.get("dependencies", {}).items():
+                print(f"    - {dep:<18} {'[✓] Available' if ok else '[✗] Missing'}")
+            print("==================================================")
+        else:
+            print(json.dumps(res, indent=2))
+
+    elif cmd == "restart":
+        print("Restarting Dynamic Island...")
+        subprocess.run(["pkill", "-f", "island-daemon.py"], capture_output=True)
+        subprocess.run(["pkill", "-f", "quickshell.*ratana-island"], capture_output=True)
+        time.sleep(0.5)
+        daemon_path = Path.home() / ".config" / "waybar" / "scripts" / "island-daemon.py"
+        if not daemon_path.exists():
+            daemon_path = Path(__file__).resolve().parent / "island-daemon.py"
+        subprocess.Popen(["python3", str(daemon_path)], start_new_session=True)
+        time.sleep(0.5)
+        subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+        print("Dynamic Island restarted.")
+
+    elif cmd == "frontend":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub == "get":
+            res = send_ipc("frontend_get")
+            print(f"Active frontend: {res.get('frontend', 'waybar')}")
+        elif sub == "set":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl frontend set <waybar|quickshell|both>\n")
+                sys.exit(1)
+            target = sys.argv[3].lower()
+            if target in ("quickshell", "both") and not shutil.which("quickshell"):
+                sys.stderr.write("Error: 'quickshell' is not found in PATH.\nInstall Quickshell or run install.sh.\n")
+                sys.exit(1)
+            res = send_ipc("frontend_set", {"frontend": target})
+            if res.get("status") == "error":
+                sys.stderr.write(f"Error: {res.get('message')}\n")
+                sys.exit(1)
+            print(res.get("message"))
+            subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+            if target in ("quickshell", "both"):
+                res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
+                if res_qs.returncode != 0:
+                    print("Quickshell is not running. Launch it with: island-ctl frontend start quickshell")
+            elif target == "waybar":
+                subprocess.run(["pkill", "-f", "quickshell.*ratana-island"], capture_output=True)
+        elif sub == "start":
+            target = sys.argv[3].lower() if len(sys.argv) > 3 else "quickshell"
+            if target == "quickshell":
+                qs_path = Path.home() / ".config" / "ratana-island" / "quickshell"
+                if not qs_path.exists():
+                    qs_path = Path(__file__).resolve().parent.parent / "quickshell"
+                if not shutil.which("quickshell"):
+                    sys.stderr.write("Error: 'quickshell' binary not found.\n")
+                    sys.exit(1)
+                res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
+                if res_qs.returncode == 0:
+                    print("Quickshell Dynamic Island overlay is already running.")
+                    sys.exit(0)
+                subprocess.Popen(
+                    ["quickshell", "-p", str(qs_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True
+                )
+                print("Started Quickshell Dynamic Island overlay.")
+            elif target == "waybar":
+                subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+                print("Waybar reloaded.")
+        elif sub == "stop":
+            target = sys.argv[3].lower() if len(sys.argv) > 3 else "quickshell"
+            if target == "quickshell":
+                subprocess.run(["pkill", "-f", "quickshell.*ratana-island"], capture_output=True)
+                print("Stopped Quickshell Dynamic Island overlay.")
+            elif target == "waybar":
+                subprocess.run(["pkill", "waybar"], capture_output=True)
+                print("Stopped Waybar.")
+        elif sub == "status":
+            res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
+            res_wb = subprocess.run(["pgrep", "waybar"], capture_output=True)
+            ipc_status = send_ipc("status")
+            fe = ipc_status.get("data", {}).get("frontend", "waybar")
+            print("==================================================")
+            print("  🏝️  Ratana Dynamic Island — Frontend Status")
+            print("==================================================")
+            print(f"  Configured Frontend:  {fe}")
+            print(f"  Quickshell Running:   {'[✓] yes' if res_qs.returncode == 0 else '[✗] no'}")
+            print(f"  Waybar Running:       {'[✓] yes' if res_wb.returncode == 0 else '[✗] no'}")
+            print("==================================================")
+        else:
+            sys.stderr.write("Usage: island-ctl frontend <get|set|start|stop|status> [args]\n")
+            sys.exit(1)
+
+    elif cmd == "dock":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "toggle"
+        res = send_ipc("dock", {"params": [sub]})
+        print(res.get("message", f"Dock: {sub}"))
+
+    elif cmd == "system":
+        res = send_ipc("system")
+        print("==================================================")
+        print("  ⚡  Ratana Dynamic Island — System Metrics")
+        print("==================================================")
+        print(f"  CPU Usage:       {res.get('cpu_percent', 0.0)}%")
+        print(f"  Memory Usage:    {res.get('memory_percent', 0.0)}%")
+        print(f"  Compositor:      {res.get('compositor', 'Wayland')}")
+        print("==================================================")
+
+    elif cmd == "share":
+        if len(sys.argv) < 3:
+            sys.stderr.write("Usage: island-ctl share <inspect|execute|cancel|<file_path...>> [target_id/files]\n")
+            sys.exit(1)
+        sub = sys.argv[2].lower()
+        if sub == "cancel":
+            res = send_ipc("share_cancel")
+            print(res.get("message", "Share cancelled"))
+        elif sub == "execute":
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl share execute <target_id>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("share_execute", {"target_id": target})
+            print(res.get("message", f"Share executed: {target}"))
+        else:
+            files_args = sys.argv[3:] if sub == "inspect" else sys.argv[2:]
+            target_files = [str(Path(p).resolve()) for p in files_args]
+            res = send_ipc("share_inspect", {"urls": target_files})
+            if res.get("status") == "ok":
+                print(f"Smart Share opened for {len(res.get('files', []))} file(s):")
+                for f in res.get("files", []):
+                    print(f"  - {f.get('icon')} {f.get('name')} ({f.get('size_str')})")
+                print("Available Targets:")
+                for t in res.get("targets", []):
+                    av = "[✓]" if t.get("available") else "[✗]"
+                    print(f"  {av} {t.get('icon')} {t.get('name')} - {t.get('description')}")
+            else:
+                print(f"Error: {res.get('message')}")
+
+    elif cmd in ("windows", "window"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "list"
+        if sub == "list":
+            res = send_ipc("windows_list")
+            print("==================================================")
+            print("  🪟  Sway / SwayFX Active Windows")
+            print("==================================================")
+            for w in res.get("windows", []):
+                st = "[Min/Scratch]" if w.get("minimized") else ("[Focused]" if w.get("focused") else "[Normal]")
+                print(f"  - {st:<14} ID: {w.get('id'):<6} App: {w.get('app_id'):<20} Title: {w.get('title')[:35]}")
+            print("==================================================")
+        elif sub in ("min", "minimize"):
+            con_id = sys.argv[3] if len(sys.argv) > 3 else "0"
+            res = send_ipc("window_minimize", {"con_id": int(con_id)})
+            print(res.get("message", "Window minimized"))
+        elif sub in ("res", "restore"):
+            con_id = sys.argv[3] if len(sys.argv) > 3 else "0"
+            res = send_ipc("window_restore", {"con_id": int(con_id)})
+            print(res.get("message", "Window restored"))
+        elif sub == "toggle":
+            con_id = sys.argv[3] if len(sys.argv) > 3 else "0"
+            res = send_ipc("window_toggle", {"con_id": int(con_id)})
+            print(res.get("message", "Window toggled"))
+        elif sub in ("toggle-app", "app"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl windows toggle-app <keyword> [fallback_binary]\n")
+                sys.exit(1)
+            kw = sys.argv[3]
+            fb = sys.argv[4] if len(sys.argv) > 4 else kw
+            res = send_ipc("window_toggle_app", {"app_keyword": kw, "fallback_binary": fb})
+            print(res.get("message", "App toggled"))
+        else:
+            sys.stderr.write("Usage: island-ctl windows <list|minimize|restore|toggle|toggle-app> [args]\n")
+            sys.exit(1)
+
+    elif cmd in ("profile", "perf"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub in ("set", "switch"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl profile set <low-resource|balanced|visual-quality>\n")
+                sys.exit(1)
+            target = sys.argv[3].lower()
+            res = send_ipc("profile", {"subcommand": "set", "name": target})
+            print(res.get("message", f"Profile set to {target}"))
+        else:
+            res = send_ipc("profile", {"subcommand": "get"})
+            print("==================================================")
+            print("  ⚡  Ratana Island Performance Profile")
+            print("==================================================")
+            print(f"  Active Profile:         {res.get('profile', 'balanced').upper()}")
+            print(f"  Idle Clock Interval:    {res.get('idle_clock_interval_s', 15.0)}s")
+            print(f"  Metrics Polling:        {res.get('metrics_interval_s', 3.0)}s")
+            print(f"  Reduced Motion:         {'Enabled' if res.get('reduced_motion') else 'Disabled'}")
+            print(f"  Minimize Animation:     {res.get('minimize_duration_ms', 380)}ms")
+            print("==================================================")
+            print("  Available profiles: low-resource, balanced, visual-quality")
+            print("  Set via: island-ctl profile set <name>")
+            print("==================================================")
+
+    elif cmd == "settings":
+        print_settings()
+
+    elif cmd == "menu":
+        launch_menu()
+
+    elif cmd == "stream":
+        stream_daemon()
+
+    elif cmd in ("help", "-h", "--help"):
+        print(__doc__.strip())
+
+    else:
+        # Fallback to dispatching raw command
+        res = send_ipc(cmd, {"params": sys.argv[2:]})
+        if res.get("message"):
+            print(res["message"])
+        else:
+            print(json.dumps(res, indent=2))
+
+
+if __name__ == "__main__":
+    main()

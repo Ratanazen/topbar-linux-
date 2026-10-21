@@ -1,0 +1,7 @@
+module widgets
+MediaWidget 1.0 MediaWidget.qml
+BluetoothWidget 1.0 BluetoothWidget.qml
+NetworkWidget 1.0 NetworkWidget.qml
+BatteryWidget 1.0 BatteryWidget.qml
+TimerWidget 1.0 TimerWidget.qml
+SystemWidget 1.0 SystemWidget.qml

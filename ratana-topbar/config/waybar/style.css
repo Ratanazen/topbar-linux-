@@ -1,0 +1,265 @@
+/* ============================================================
+   Ratana Top Bar — macOS-Inspired Floating Glass Stylesheet
+   Designed to precisely match reference design (V23.png)
+   ============================================================ */
+
+/* --- Reusable Design Tokens --- */
+@define-color bg-glass rgba(20, 24, 30, 0.82);
+@define-color border-glass rgba(255, 255, 255, 0.14);
+@define-color text-primary #f0f0f5;
+@define-color text-muted rgba(255, 255, 255, 0.55);
+@define-color active-pill-bg #c8c0a8;
+@define-color active-pill-fg #1a1d21;
+@define-color accent-blue #0a84ff;
+@define-color accent-cyan #5ac8fa;
+@define-color accent-green #30d158;
+@define-color accent-orange #ff9f0a;
+@define-color accent-red #ff453a;
+@define-color hover-glass rgba(255, 255, 255, 0.12);
+
+/* --- Global Settings --- */
+* {
+  font-family: 'JetBrainsMono Nerd Font', 'Noto Sans Khmer', 'SF Pro Display', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  min-height: 0px;
+  border: none;
+}
+
+/* --- Waybar Base Container (Full Transparent Canvas) --- */
+window#waybar {
+  background-color: transparent;
+  color: @text-primary;
+}
+
+window#waybar.empty #window {
+  background: transparent;
+  color: transparent;
+}
+
+#waybar.empty .modules-center {
+  opacity: 0;
+}
+
+/* Tooltip */
+tooltip {
+  background: rgba(18, 20, 26, 0.96);
+  border: 1px solid @border-glass;
+  border-radius: 12px;
+  color: @text-primary;
+  padding: 6px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+tooltip label {
+  color: @text-primary;
+}
+
+/* ============================================================
+   ZONE A: LEFT FLOATING CAPSULES
+   ============================================================ */
+
+/* Left Group 1: Settings & Status Capsule */
+#left1 {
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
+  border-radius: 24px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.45);
+  margin: 0px 4px 2px 4px;
+  padding: 0 10px;
+}
+
+#left1 #custom-omarchy {
+  color: @text-primary;
+  font-size: 13px;
+  padding: 0 4px;
+  transition: color 0.2s ease;
+}
+
+#left1 #custom-omarchy:hover {
+  color: @accent-cyan;
+}
+
+#left1 #idle_inhibitor {
+  color: @text-muted;
+  padding: 0 4px;
+}
+
+#left1 #idle_inhibitor.activated {
+  color: @accent-orange;
+}
+
+#left1 #custom-update {
+  color: @text-muted;
+  padding: 0 4px;
+}
+
+#left1 #custom-update:hover {
+  color: @accent-blue;
+}
+
+/* Left Group 2: Workspaces Capsule */
+#workspaces {
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
+  border-radius: 24px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.45);
+  margin: 0px 4px 2px 4px;
+  padding: 2px 4px;
+}
+
+#workspaces button {
+  padding: 0px 8px;
+  margin: 1px 2px;
+  border-radius: 20px;
+  background-color: transparent;
+  color: @text-muted;
+  min-width: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#workspaces button:hover {
+  background-color: @hover-glass;
+  color: @text-primary;
+}
+
+/* Active / Focused Workspace: Rounded Pill Highlight */
+#workspaces button.focused,
+#workspaces button.active {
+  background-color: @active-pill-bg;
+  color: @active-pill-fg;
+  font-weight: 800;
+  min-width: 38px;
+  border-radius: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#workspaces button.urgent {
+  background-color: @accent-red;
+  color: #ffffff;
+}
+
+/* ============================================================
+   ZONE B: CENTER FLOATING WINDOW TITLE CAPSULE
+   ============================================================ */
+
+.modules-center {
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
+  border-radius: 24px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.45);
+  margin: 0px 4px 2px 4px;
+  padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.modules-center:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+#window {
+  color: @text-primary;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+/* ============================================================
+   ZONE C: RIGHT FLOATING STATUS CAPSULE
+   ============================================================ */
+
+.modules-right {
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
+  border-radius: 24px;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.45);
+  margin: 0px 4px 2px 4px;
+  padding: 0 10px;
+}
+
+/* Tray Expander */
+#custom-expand-icon {
+  color: @text-muted;
+  padding: 0 4px;
+}
+
+#custom-expand-icon:hover {
+  color: @text-primary;
+}
+
+#tray {
+  padding: 0 4px;
+}
+
+/* Status Icons & Text */
+#custom-darkmode,
+#bluetooth,
+#pulseaudio,
+#network,
+#memory,
+#cpu,
+#battery,
+#custom-power-profile,
+#custom-weather,
+#clock {
+  padding: 0 5px;
+  margin: 0 1px;
+  color: @text-primary;
+  transition: color 0.15s ease;
+}
+
+#custom-darkmode:hover,
+#bluetooth:hover,
+#pulseaudio:hover,
+#network:hover,
+#memory:hover,
+#cpu:hover,
+#battery:hover,
+#custom-power-profile:hover,
+#custom-weather:hover,
+#clock:hover {
+  color: @accent-cyan;
+}
+
+#bluetooth.disabled,
+#bluetooth.off {
+  color: @text-muted;
+}
+
+#pulseaudio.muted {
+  color: @accent-red;
+}
+
+#network.disconnected {
+  color: @accent-red;
+}
+
+#battery.charging,
+#battery.plugged {
+  color: @accent-green;
+}
+
+#battery.warning {
+  color: @accent-orange;
+}
+
+#battery.critical {
+  color: @accent-red;
+}
+
+#custom-power-profile.performance {
+  color: @accent-orange;
+}
+
+#custom-power-profile.quiet {
+  color: @accent-cyan;
+}
+
+#custom-power-profile.balanced {
+  color: @text-primary;
+}
+
+#clock {
+  font-weight: 800;
+  padding-right: 4px;
+}

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ratana-island"
+version = "0.1.0"
+description = "Native Linux Dynamic Island + macOS-Style Desktop for Sway/SwayFX"
+readme = "README.md"
+authors = [
+    { name = "Ratana Island Team" }
+]
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.10"
+dependencies = [
+    "PyGObject>=3.42.0",
+    "requests>=2.28.0",
+]
+
+[project.scripts]
+ratana-island = "ratana_island.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

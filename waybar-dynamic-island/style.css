@@ -1,0 +1,317 @@
+/* =============================================================================
+ * RATANA DYNAMIC ISLAND — GTK3 CSS DESIGN SYSTEM
+ * =============================================================================
+ * Supports 4 complete themes:
+ *   1. macos-black     (Default Apple obsidian aesthetics)
+ *   2. catppuccin-mocha (Coordinated pastel palette)
+ *   3. glass           (Translucent layered surface simulation)
+ *   4. minimal         (Restrained, low-contrast, compact styling)
+ * ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+ * 1. THEME PRESET: MACOS-BLACK (Default)
+ * ----------------------------------------------------------------------------- */
+@define-color mb_bg             #09090b;
+@define-color mb_bg_hover       #141418;
+@define-color mb_border         #292933;
+@define-color mb_border_hover   #3f3f4e;
+@define-color mb_text           #f5f5f7;
+@define-color mb_text_muted     #a1a1aa;
+@define-color mb_shadow         rgba(0, 0, 0, 0.60);
+
+/* Accent Tokens */
+@define-color mb_accent_media   #cba6f7;
+@define-color mb_accent_notif   #89b4fa;
+@define-color mb_accent_urgent  #f38ba8;
+@define-color mb_accent_charge  #a6e3a1;
+@define-color mb_accent_rec     #f38ba8;
+@define-color mb_accent_timer   #a6e3a1;
+@define-color mb_accent_slider  #89b4fa;
+@define-color mb_accent_net     #74c7ec;
+@define-color mb_accent_clip    #fab387;
+
+/* -----------------------------------------------------------------------------
+ * 2. CORE CAPSULE CONTAINER
+ * ----------------------------------------------------------------------------- */
+#custom-island {
+    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", "SF Pro Display", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: @mb_text;
+    background-color: @mb_bg;
+    border: 1px solid @mb_border;
+    border-radius: 999px;
+    padding: 0px 16px;
+    margin: 3px 0px;
+    box-shadow: 0 4px 14px @mb_shadow;
+
+    /* GTK CSS transitions between states */
+    transition: min-width 280ms cubic-bezier(0.25, 0.8, 0.25, 1.0),
+                background-color 250ms ease,
+                border-color 250ms ease,
+                color 200ms ease,
+                padding 250ms ease;
+}
+
+#custom-island:hover {
+    background-color: @mb_bg_hover;
+    border-color: @mb_border_hover;
+}
+
+#custom-island.hidden {
+    min-width: 0px !important;
+    max-width: 0px !important;
+    padding: 0px !important;
+    margin: 0px !important;
+    border: none !important;
+    opacity: 0 !important;
+    box-shadow: none !important;
+}
+
+/* -----------------------------------------------------------------------------
+ * 3. PRESENTATION MODES
+ * ----------------------------------------------------------------------------- */
+/* Stable-Width Mode (Recommended Default — Zero Width Jitter in Waybar) */
+#custom-island.stable-width {
+    min-width: 260px;
+    max-width: 260px;
+}
+#custom-island.stable-width.full {
+    min-width: 380px;
+    max-width: 380px;
+}
+
+/* Content-Width Mode (Natural sizing per state) */
+#custom-island.content-width.idle         { min-width: 150px; }
+#custom-island.content-width.media        { min-width: 280px; }
+#custom-island.content-width.volume       { min-width: 190px; }
+#custom-island.content-width.brightness   { min-width: 190px; }
+#custom-island.content-width.notification { min-width: 310px; }
+#custom-island.content-width.timer        { min-width: 210px; }
+#custom-island.content-width.network      { min-width: 220px; }
+#custom-island.content-width.clipboard    { min-width: 180px; }
+#custom-island.content-width.recording    { min-width: 200px; }
+#custom-island.content-width.charging     { min-width: 210px; }
+#custom-island.content-width.language     { min-width: 260px; }
+#custom-island.content-width.full         { min-width: 380px; max-width: 500px; }
+
+/* -----------------------------------------------------------------------------
+ * 4. STATE MORPHOLOGY & ACCENT STYLING
+ * ----------------------------------------------------------------------------- */
+
+/* IDLE: Compact Clock Pill */
+#custom-island.idle {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* MEDIA: Purple Accent */
+#custom-island.media {
+    background: linear-gradient(135deg, rgba(9, 9, 11, 0.96), rgba(26, 20, 36, 0.96));
+    border-color: rgba(203, 166, 247, 0.40);
+    box-shadow: 0 4px 18px rgba(203, 166, 247, 0.15);
+}
+#custom-island.media.paused {
+    background: @mb_bg;
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* VOLUME & BRIGHTNESS: Blue/Yellow Sliders */
+#custom-island.volume {
+    border-color: rgba(137, 180, 250, 0.45);
+    box-shadow: 0 4px 16px rgba(137, 180, 250, 0.15);
+}
+#custom-island.volume.muted {
+    border-color: rgba(243, 139, 168, 0.50);
+    color: @mb_accent_urgent;
+}
+#custom-island.brightness {
+    border-color: rgba(249, 226, 175, 0.45);
+    box-shadow: 0 4px 16px rgba(249, 226, 175, 0.15);
+}
+
+/* NOTIFICATIONS: Cyan banner / Red for urgent */
+#custom-island.notification {
+    padding: 0px 18px;
+    background: linear-gradient(135deg, rgba(9, 9, 11, 0.96), rgba(18, 24, 38, 0.96));
+    border-color: rgba(137, 180, 250, 0.50);
+    box-shadow: 0 6px 20px rgba(137, 180, 250, 0.18);
+}
+#custom-island.notification.urgent {
+    border-color: rgba(243, 139, 168, 0.75);
+    background: linear-gradient(135deg, rgba(38, 12, 18, 0.96), rgba(24, 10, 14, 0.96));
+    box-shadow: 0 6px 22px rgba(243, 139, 168, 0.35);
+    animation: island-pulse 1.2s infinite;
+}
+
+/* TIMER & POMODORO: Emerald Green Focus Ring */
+#custom-island.timer {
+    border-color: rgba(166, 227, 161, 0.45);
+    box-shadow: 0 4px 16px rgba(166, 227, 161, 0.15);
+}
+#custom-island.timer.done {
+    border-color: rgba(250, 179, 135, 0.70);
+    animation: island-pulse 1.0s infinite;
+    color: #fab387;
+}
+
+/* NETWORK CONNECTIVITY: Sky Blue Pill */
+#custom-island.network {
+    border-color: rgba(116, 199, 236, 0.50);
+    box-shadow: 0 4px 16px rgba(116, 199, 236, 0.18);
+}
+#custom-island.network.disconnected {
+    border-color: rgba(243, 139, 168, 0.60);
+    color: @mb_accent_urgent;
+}
+
+/* CLIPBOARD: Warm Peach Indicator */
+#custom-island.clipboard {
+    border-color: rgba(250, 179, 135, 0.50);
+    box-shadow: 0 4px 16px rgba(250, 179, 135, 0.15);
+}
+
+/* CHARGING & POWER */
+#custom-island.charging {
+    border-color: rgba(166, 227, 161, 0.60);
+    box-shadow: 0 4px 18px rgba(166, 227, 161, 0.20);
+}
+#custom-island.low-battery {
+    border-color: rgba(243, 139, 168, 0.75);
+    color: @mb_accent_urgent;
+    animation: island-pulse 1.4s infinite;
+}
+
+/* SCREEN RECORDING: Active Red Pulse */
+#custom-island.recording {
+    background: linear-gradient(135deg, rgba(38, 10, 14, 0.96), rgba(20, 8, 10, 0.96));
+    border-color: rgba(243, 139, 168, 0.85);
+    box-shadow: 0 4px 20px rgba(243, 139, 168, 0.40);
+    animation: island-recording-pulse 1.0s infinite alternate;
+}
+
+/* SYSTEM & ERROR STATES */
+#custom-island.system {
+    border-color: rgba(180, 190, 254, 0.45);
+}
+#custom-island.task {
+    border-color: rgba(180, 190, 254, 0.50);
+    box-shadow: 0 4px 18px rgba(180, 190, 254, 0.20);
+}
+#custom-island.task.done {
+    border-color: rgba(166, 227, 161, 0.70);
+    box-shadow: 0 4px 20px rgba(166, 227, 161, 0.25);
+}
+/* LANGUAGE / KEYBOARD LAYOUT: Indigo Accent */
+#custom-island.language {
+    background: linear-gradient(135deg, rgba(9, 9, 11, 0.96), rgba(20, 24, 38, 0.96));
+    border-color: rgba(137, 180, 250, 0.55);
+    box-shadow: 0 4px 18px rgba(137, 180, 250, 0.20);
+}
+
+/* FULL MODE: Expanded presentation */
+#custom-island.full {
+    padding: 0px 20px;
+    letter-spacing: 0.2px;
+}
+
+/* HIDDEN: Transparent placeholder when Quickshell is active */
+#custom-island.hidden {
+    opacity: 0;
+    min-width: 0px;
+    padding: 0px;
+    margin: 0px;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+
+/* -----------------------------------------------------------------------------
+ * 5. KEYFRAME ANIMATIONS & REDUCED MOTION
+ * ----------------------------------------------------------------------------- */
+@keyframes island-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(243, 139, 168, 0.5);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(243, 139, 168, 0.0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(243, 139, 168, 0.0);
+    }
+}
+
+@keyframes island-recording-pulse {
+    0% {
+        border-color: rgba(243, 139, 168, 0.4);
+        box-shadow: 0 0 4px rgba(243, 139, 168, 0.2);
+    }
+    100% {
+        border-color: rgba(243, 139, 168, 1.0);
+        box-shadow: 0 0 16px rgba(243, 139, 168, 0.6);
+    }
+}
+
+/* Reduced Motion Mode */
+#custom-island.reduced-motion,
+@media (prefers-reduced-motion: reduce) {
+    #custom-island {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* -----------------------------------------------------------------------------
+ * 6. THEME PRESET OVERRIDES (Selected via config.ini or island-ctl theme)
+ * ----------------------------------------------------------------------------- */
+/* THEME 1: MACOS-BLACK */
+#custom-island.theme-macos-black {
+    background-color: #09090b;
+    border-color: #292933;
+    color: #f5f5f7;
+}
+
+/* THEME 2: MACOS-GLASS (Translucent frosted glass simulation) */
+#custom-island.theme-macos-glass,
+#custom-island.theme-glass {
+    background-color: rgba(18, 20, 26, 0.72);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+    color: #ffffff;
+}
+
+/* THEME 3: HYPEROS-DARK (Xiaomi HyperOS translucent charcoal + cyan accent) */
+#custom-island.theme-hyperos-dark,
+#custom-island.theme-hyperos {
+    background-color: rgba(22, 22, 26, 0.94);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.60);
+    color: #f0f0f2;
+}
+
+/* THEME 4: ORIGINOS-DARK (vivo OriginOS dark indigo-slate + neon accent) */
+#custom-island.theme-originos-dark,
+#custom-island.theme-originos {
+    background-color: rgba(23, 24, 34, 0.94);
+    border-color: rgba(130, 136, 178, 0.22);
+    box-shadow: 0 6px 24px rgba(23, 24, 34, 0.50);
+    color: #f2f4f8;
+}
+
+/* THEME 5: CATPPUCCIN-MOCHA */
+#custom-island.theme-catppuccin-mocha,
+#custom-island.theme-mocha {
+    background-color: #1e1e2e;
+    border-color: #313244;
+    color: #cdd6f4;
+}
+
+/* THEME 6: MINIMAL-DARK (Pure OLED black, clean restrained border) */
+#custom-island.theme-minimal-dark,
+#custom-island.theme-minimal {
+    background-color: #000000;
+    border-color: #262626;
+    box-shadow: none;
+    color: #e5e5e5;
+}
+

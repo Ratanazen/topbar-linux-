@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Ratana Island Launcher
+# Ensures GTK4 Layer Shell is preloaded to avoid PyGObject linker ordering issues
+
+LIB_GTK4_LAYER_SHELL="/usr/lib/libgtk4-layer-shell.so"
+
+if [ -f "$LIB_GTK4_LAYER_SHELL" ]; then
+    if [[ ":$LD_PRELOAD:" != *":$LIB_GTK4_LAYER_SHELL:"* ]]; then
+        export LD_PRELOAD="${LIB_GTK4_LAYER_SHELL}${LD_PRELOAD:+:$LD_PRELOAD}"
+    fi
+fi
+
+# Locate project directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PYTHONPATH="$SCRIPT_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+
+exec python3 -m ratana_island.main "$@"

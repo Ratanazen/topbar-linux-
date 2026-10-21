@@ -1,0 +1,55 @@
+// =============================================================================
+// WAYBAR DYNAMIC ISLAND — MODULE CONFIGURATION (config.jsonc)
+// =============================================================================
+// Place this inside your ~/.config/waybar/config.jsonc
+// =============================================================================
+
+{
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "spacing": 4,
+
+    // Module Layout: Center is reserved exclusively for the Dynamic Island
+    "modules-left": [
+        "sway/workspaces",     // or "hyprland/workspaces"
+        "sway/mode"
+    ],
+    "modules-center": [
+        "custom/island"
+    ],
+    "modules-right": [
+        "tray",
+        "wireplumber",
+        "battery",
+        "clock"
+    ],
+
+    // =========================================================================
+    // DYNAMIC ISLAND MODULE DEFINITION
+    // =========================================================================
+    "custom/island": {
+        // Option A: Direct daemon streaming (Recommended)
+        "exec": "$HOME/.config/waybar/scripts/island-daemon.py",
+
+        // Option B: If running island-daemon via systemd service, uncomment:
+        // "exec": "$HOME/.config/waybar/scripts/island-ctl stream",
+
+        "return-type": "json",
+        "format": "{}",
+        "escape": false,           // Required: allows Pango markup spans for styling
+        "restart-interval": 2,     // Auto-reconnect if daemon restarts
+        "hide-empty-text": true,
+        "tooltip": true,
+
+        // Interactive Event Bindings
+        "on-click": "$HOME/.config/waybar/scripts/island-ctl media toggle",
+        "on-click-right": "$HOME/.config/waybar/scripts/island-ctl menu",
+        "on-click-middle": "$HOME/.config/waybar/scripts/island-ctl media next",
+        "on-scroll-up": "$HOME/.config/waybar/scripts/island-ctl volume up",
+        "on-scroll-down": "$HOME/.config/waybar/scripts/island-ctl volume down",
+
+        // Signal for instant updates (SIGRTMIN+8 = signal 8)
+        "signal": 8
+    }
+}

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Ratana Island
+GenericName=Dynamic Island
+Comment=Native Linux Dynamic Island for Sway/SwayFX on Wayland
+Exec=ratana-island
+Icon=preferences-system-windows
+Terminal=false
+Type=Application
+Categories=Utility;DesktopSettings;
+Keywords=island;dynamic;sway;swayfx;mpris;lyrics;wayland;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

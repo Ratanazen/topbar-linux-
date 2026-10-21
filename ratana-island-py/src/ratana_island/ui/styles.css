@@ -1,0 +1,228 @@
+/* Ratana Island - Apple Obsidian Glass GTK4 Styling */
+
+* {
+    font-family: "SF Pro Display", "Inter", "Cantarell", "Ubuntu", sans-serif;
+    outline: none;
+    -gtk-icon-style: symbolic;
+}
+
+window,
+window.background,
+#island-root {
+    background-color: transparent;
+    background: none;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* The floating capsule container */
+#island-capsule {
+    background-color: rgba(10, 10, 14, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65);
+    transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#island-capsule:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+#island-capsule.expanded {
+    background-color: rgba(14, 14, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 26px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.78);
+}
+
+/* Compact pill elements */
+.compact-box {
+    padding: 4px 14px;
+}
+
+.pill-title {
+    color: #f5f5f7;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pill-artist {
+    color: #a1a1a6;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.pill-status-dot {
+    color: #30d158;
+    font-size: 14px;
+}
+
+.visualizer-bar {
+    background-color: #30d158;
+    border-radius: 2px;
+    min-width: 3px;
+    margin: 0 1px;
+}
+
+/* Expanded Card elements */
+.expanded-box {
+    padding: 16px 20px;
+}
+
+.expanded-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.expanded-artist {
+    color: #98989d;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.expanded-player-badge {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #d1d1d6;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Album artwork */
+.album-art-compact {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.album-art-expanded {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Lyrics pane */
+.lyrics-box {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 8px 12px;
+    margin: 8px 0;
+}
+
+.lyric-prev {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.lyric-active {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.lyric-next {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+/* Playback controls */
+.control-btn {
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: #ffffff;
+    padding: 6px;
+    min-width: 32px;
+    min-height: 32px;
+    transition: all 180ms ease;
+}
+
+.control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.control-btn.play-btn {
+    background-color: #ffffff;
+    color: #000000;
+    min-width: 36px;
+    min-height: 36px;
+}
+
+.control-btn.play-btn:hover {
+    background-color: #e5e5ea;
+    transform: scale(1.05);
+}
+
+/* Time & Progress */
+.time-label {
+    color: #86868b;
+    font-size: 11px;
+    font-weight: 500;
+    font-feature-settings: "tnum";
+}
+
+/* Scale / Progress bars */
+scale trough {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-radius: 4px;
+    min-height: 4px;
+}
+
+scale highlight {
+    background-color: #ffffff;
+    border-radius: 4px;
+    min-height: 4px;
+}
+
+scale slider {
+    background-color: #ffffff;
+    border-radius: 50%;
+    min-width: 10px;
+    min-height: 10px;
+    margin: -3px;
+}
+
+scale slider:hover {
+    min-width: 14px;
+    min-height: 14px;
+    margin: -5px;
+}
+
+/* HUD System Controls */
+.hud-icon {
+    color: #a1a1a6;
+    margin-right: 6px;
+}
+
+/* Notification Capsule Elements */
+.notification-box {
+    padding: 6px 16px;
+}
+
+.notification-icon {
+    color: #ff9f0a;
+}
+
+.notification-title {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.notification-body {
+    color: #a1a1a6;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.notification-dot {
+    color: #ff9f0a;
+    font-size: 16px;
+}
