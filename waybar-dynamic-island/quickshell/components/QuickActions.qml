@@ -21,8 +21,9 @@ Column {
             spacing: 6
 
             Text {
-                text: "⚡"
-                font.pixelSize: 12
+                text: "󰘳"
+                color: Theme.accent
+                font.pixelSize: 13
             }
             Text {
                 text: "Control Center"
@@ -317,7 +318,7 @@ Column {
     }
 
     // -------------------------------------------------------------
-    // HyperOS Section 3: 5 Quick Utility Tiles
+    // Quick Actions: 5 Quick Utility Tiles (All Symbolic Icons)
     // -------------------------------------------------------------
     Row {
         width: parent.width
@@ -332,7 +333,7 @@ Column {
 
             Text {
                 anchors.centerIn: parent
-                text: "🍅 Focus"
+                text: "󰔛 Focus"
                 color: Theme.textPrimary
                 font.pixelSize: 9
                 font.bold: true
@@ -355,7 +356,7 @@ Column {
 
             Text {
                 anchors.centerIn: parent
-                text: "🔕 DND"
+                text: "󰂛 DND"
                 color: Theme.accentRed
                 font.pixelSize: 9
                 font.bold: true
@@ -378,7 +379,7 @@ Column {
 
             Text {
                 anchors.centerIn: parent
-                text: "🖼️ Wall"
+                text: "󰸉 Wall"
                 color: Theme.accentGreen
                 font.pixelSize: 9
                 font.bold: true
@@ -411,7 +412,7 @@ Column {
 
             Text {
                 anchors.centerIn: parent
-                text: "🎨 Theme"
+                text: "󰏘 Theme"
                 color: Theme.accent
                 font.pixelSize: 9
                 font.bold: true
@@ -420,8 +421,10 @@ Column {
             TapHandler {
                 onTapped: {
                     var themes = [
-                        "macos-black",
+                        "macos-tahoe",
+                        "macos-dark",
                         "macos-glass",
+                        "macos-black",
                         "hyperos-dark",
                         "originos-dark",
                         "catppuccin-mocha",
@@ -443,7 +446,7 @@ Column {
 
             Text {
                 anchors.centerIn: parent
-                text: "⚓ Dock"
+                text: "󰀻 Dock"
                 color: Theme.accentPurple
                 font.pixelSize: 9
                 font.bold: true

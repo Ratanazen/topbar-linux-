@@ -487,6 +487,25 @@ def main():
             sys.exit(1)
         print(res.get("message", "Volume action sent"))
 
+    elif cmd in ("audio-sink", "audio_sink", "sink", "sinks"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "list"
+        if sub in ("list", "get"):
+            res = send_ipc("audio_sinks")
+            for s in res.get("sinks", []):
+                def_mark = "*" if s.get("is_default") else " "
+                print(f"[{def_mark}] {s.get('id')}: {s.get('description')} ({s.get('name')})")
+        elif sub in ("set", "switch"):
+            if len(sys.argv) < 4:
+                sys.stderr.write("Usage: island-ctl audio-sink set <sink_name_or_id>\n")
+                sys.exit(1)
+            target = sys.argv[3]
+            res = send_ipc("audio_sink_set", {"sink": target})
+            print(f"[✓] Switched default audio sink to {target}")
+        else:
+            sys.stderr.write("Usage: island-ctl audio-sink <list|set <sink>>\n")
+            sys.exit(1)
+
+
     elif cmd in ("brightness", "bright"):
         sub = sys.argv[2].lower() if len(sys.argv) > 2 else "up"
         if sub in ("up", "+5%"):

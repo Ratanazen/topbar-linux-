@@ -9,6 +9,13 @@ QtObject {
     // Background color
     readonly property color background: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+                return Qt.rgba(0.06, 0.08, 0.14, 0.76); // Frosted Tahoe Azure Glass
+            case "macos-dark":
+                return Qt.rgba(0.08, 0.08, 0.11, 0.88); // macOS Dark Glass
+            case "low-resource":
+                return Qt.rgba(0.08, 0.08, 0.10, 0.98); // Opaque low-resource surface
             case "macos-glass":
             case "glass":
                 return Qt.rgba(0.07, 0.08, 0.10, 0.72); // Frosted dark glass
@@ -33,6 +40,13 @@ QtObject {
     // Border color
     readonly property color border: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+                return Qt.rgba(0.40, 0.70, 1.0, 0.25);
+            case "macos-dark":
+                return Qt.rgba(1.0, 1.0, 1.0, 0.16);
+            case "low-resource":
+                return Qt.rgba(0.20, 0.20, 0.24, 0.90);
             case "macos-glass":
             case "glass":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.24); // Frosted illuminated rim
@@ -57,6 +71,13 @@ QtObject {
     // Card background for expanded cards and widgets
     readonly property color cardBackground: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+                return Qt.rgba(1.0, 1.0, 1.0, 0.10);
+            case "macos-dark":
+                return Qt.rgba(1.0, 1.0, 1.0, 0.08);
+            case "low-resource":
+                return Qt.rgba(0.12, 0.12, 0.15, 0.95);
             case "macos-glass":
             case "glass":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.08);
@@ -81,6 +102,11 @@ QtObject {
     // Text colors
     readonly property color textPrimary: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+            case "macos-dark":
+            case "low-resource":
+                return "#ffffff";
             case "catppuccin-mocha":
             case "catppuccin":
                 return "#cdd6f4";
@@ -104,6 +130,13 @@ QtObject {
 
     readonly property color textSecondary: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+                return "#d0d8e8";
+            case "macos-dark":
+                return "#b0b0b8";
+            case "low-resource":
+                return "#a0a0a8";
             case "catppuccin-mocha":
             case "catppuccin":
                 return "#a6adc8";
@@ -128,6 +161,12 @@ QtObject {
     // Accents
     readonly property color accent: {
         switch (currentTheme) {
+            case "macos-tahoe":
+            case "tahoe":
+                return "#409cff";
+            case "macos-dark":
+            case "low-resource":
+                return "#0a84ff";
             case "hyperos-dark":
             case "hyperos":
                 return "#00d1c7"; // Xiaomi Cyan

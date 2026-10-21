@@ -76,6 +76,29 @@ QtObject {
     property bool settingsOpen: false
     property bool wifiOpen: false
     property bool bluetoothOpen: false
+    property bool systemMenuOpen: false
+    property bool audioPopoverOpen: false
+    property bool batteryPopoverOpen: false
+    property bool calendarPopoverOpen: false
+    property bool controlCenterOpen: false
+
+    // macOS Top Bar Configuration & State
+    property bool topBarEnabled: true
+    property int topBarHeight: 30
+    property bool notchEnabled: false
+    property int notchWidth: 160
+    property bool micActive: false
+    property var audioSinks: []
+
+    // Active Window Name for Top Bar Left Menu
+    readonly property string activeAppTitle: {
+        if (focusedWindow) {
+            if (focusedWindow.name && focusedWindow.name.length > 0) return focusedWindow.name;
+            if (focusedWindow.app_id && focusedWindow.app_id.length > 0) return focusedWindow.app_id;
+            if (focusedWindow.title && focusedWindow.title.length > 0) return focusedWindow.title;
+        }
+        return "Finder";
+    }
 
     // Wi-Fi Interactive State
     property var wifiNetworks: []
@@ -157,6 +180,16 @@ QtObject {
                 if (!data || data.trim().length === 0) return;
                 try {
                     var msg = JSON.parse(data.trim());
+                    if (msg.ui_action !== undefined) {
+                        if (msg.ui_action === "calendar") root.toggleCalendarPopover();
+                        else if (msg.ui_action === "audio") root.toggleAudioPopover();
+                        else if (msg.ui_action === "battery") root.toggleBatteryPopover();
+                        else if (msg.ui_action === "system_menu") root.toggleSystemMenu();
+                        else if (msg.ui_action === "control_center") root.toggleControlCenter();
+                        else if (msg.ui_action === "wifi") root.toggleWifiView();
+                        else if (msg.ui_action === "bluetooth") root.toggleBluetoothView();
+                        else if (msg.ui_action === "dismiss") root.dismiss();
+                    }
                     if (msg.state !== undefined) {
                         var nextState = msg.state || "idle";
                         if (root.activeState !== nextState) root.activeState = nextState;
@@ -248,6 +281,24 @@ QtObject {
                         }
                         if (msg.accessory_visible !== undefined) {
                             root.accessoryVisible = Boolean(msg.accessory_visible);
+                        }
+                        if (msg.mic_active !== undefined) {
+                            root.micActive = Boolean(msg.mic_active);
+                        }
+                        if (msg.audio_sinks !== undefined) {
+                            root.audioSinks = msg.audio_sinks || [];
+                        }
+                        if (msg.notch_enabled !== undefined) {
+                            root.notchEnabled = Boolean(msg.notch_enabled);
+                        }
+                        if (msg.notch_width !== undefined) {
+                            root.notchWidth = parseInt(msg.notch_width) || 160;
+                        }
+                        if (msg.topbar_height !== undefined) {
+                            root.topBarHeight = parseInt(msg.topbar_height) || 30;
+                        }
+                        if (msg.topbar_enabled !== undefined) {
+                            root.topBarEnabled = Boolean(msg.topbar_enabled);
                         }
                     }
                 } catch (e) {
@@ -382,7 +433,30 @@ QtObject {
         }
     }
 
+    function closeAllPopovers() {
+        wifiOpen = false;
+        bluetoothOpen = false;
+        settingsOpen = false;
+        quickActionsOpen = false;
+        systemMenuOpen = false;
+        audioPopoverOpen = false;
+        batteryPopoverOpen = false;
+        calendarPopoverOpen = false;
+        controlCenterOpen = false;
+        userExpanded = false;
+    }
+
     function dismiss() {
+        if (systemMenuOpen || audioPopoverOpen || batteryPopoverOpen || calendarPopoverOpen || controlCenterOpen || wifiOpen || bluetoothOpen) {
+            systemMenuOpen = false;
+            audioPopoverOpen = false;
+            batteryPopoverOpen = false;
+            calendarPopoverOpen = false;
+            controlCenterOpen = false;
+            wifiOpen = false;
+            bluetoothOpen = false;
+            return;
+        }
         if (wifiOpen) {
             wifiOpen = false;
         } else if (bluetoothOpen) {
@@ -401,27 +475,55 @@ QtObject {
         }
     }
 
+    function toggleSystemMenu() {
+        var next = !systemMenuOpen;
+        closeAllPopovers();
+        systemMenuOpen = next;
+    }
+
+    function toggleAudioPopover() {
+        var next = !audioPopoverOpen;
+        closeAllPopovers();
+        audioPopoverOpen = next;
+        if (next) fetchAudioSinks();
+    }
+
+    function toggleBatteryPopover() {
+        var next = !batteryPopoverOpen;
+        closeAllPopovers();
+        batteryPopoverOpen = next;
+    }
+
+    function toggleCalendarPopover() {
+        var next = !calendarPopoverOpen;
+        closeAllPopovers();
+        calendarPopoverOpen = next;
+    }
+
+    function toggleControlCenter() {
+        var next = !controlCenterOpen;
+        closeAllPopovers();
+        controlCenterOpen = next;
+    }
+
     function toggleQuickActions() {
-        wifiOpen = false;
-        bluetoothOpen = false;
-        settingsOpen = false;
-        userExpanded = false;
-        if (quickActionsOpen || activeState === "quickActions" || activeState === "quick_actions") {
-            quickActionsOpen = false;
-            sendCommand("dismiss");
-        } else {
+        var next = !(quickActionsOpen || activeState === "quickActions" || activeState === "quick_actions");
+        closeAllPopovers();
+        if (next) {
             quickActionsOpen = true;
             sendCommand("quick-actions");
+        } else {
+            quickActionsOpen = false;
+            sendCommand("dismiss");
         }
     }
 
     function toggleSettings() {
-        wifiOpen = false;
-        bluetoothOpen = false;
-        quickActionsOpen = false;
-        userExpanded = false;
-        settingsOpen = !settingsOpen;
+        var next = !settingsOpen;
+        closeAllPopovers();
+        settingsOpen = next;
     }
+
 
     function toggleExpanded() {
         wifiOpen = false;
@@ -670,4 +772,39 @@ QtObject {
         repeat: false
         onTriggered: scanBluetooth()
     }
+
+    // Audio Output Sinks Interactive State
+    property var audioSinksProcess: Process {
+        command: ["python3", "-c", "import socket, json; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect('/run/user/1000/ratana-island.sock'); s.sendall(b'{\"command\":\"audio_sinks\"}\\n'); print(s.recv(16384).decode())"]
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: data => {
+                if (!data || data.trim().length === 0) return;
+                try {
+                    var res = JSON.parse(data.trim());
+                    if (res.sinks) root.audioSinks = res.sinks;
+                } catch (e) {}
+            }
+        }
+    }
+
+    function fetchAudioSinks() {
+        audioSinksProcess.running = true;
+    }
+
+    function setAudioSink(sinkId) {
+        if (!sinkId) return;
+        var p = appLauncherComponent.createObject(root, {
+            command: ["island-ctl", "audio-sink", "set", String(sinkId)]
+        });
+        if (p) p.running = true;
+        audioSinkRefreshTimer.restart();
+    }
+
+    property var audioSinkRefreshTimer: Timer {
+        interval: 600
+        repeat: false
+        onTriggered: fetchAudioSinks()
+    }
 }
+

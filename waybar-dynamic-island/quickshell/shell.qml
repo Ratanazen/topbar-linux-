@@ -9,9 +9,23 @@ import "dock"
 ShellRoot {
     id: root
 
+    // 0. macOS-Style Top Bar (Tahoe Inspired Full Menu Bar)
+    Variants {
+        model: Quickshell.screens
+
+        delegate: Component {
+            MacTopBar {
+                id: topBar
+                required property var modelData
+                screenTarget: modelData
+            }
+        }
+    }
+
     // 1. Dynamic Island Top Layer-Shell Overlay
     Variants {
         model: Quickshell.screens
+
 
         delegate: Component {
             PanelWindow {

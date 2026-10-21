@@ -156,6 +156,7 @@ class DynamicIslandDaemon:
         self.media_backend = MediaBackend(self.config, self.caps, self._on_media_state_changed)
         self.bluetooth_backend = BluetoothBackend(self.config, self.push_transient_event)
         self.audio_backend = AudioBackend(self.config, self.caps, self.push_transient_event)
+        self.audio_backend.on_mic_change = lambda active: self.render_and_broadcast()
         self.brightness_backend = BrightnessBackend(self.config, self.caps, self.push_transient_event)
         self.battery_backend = BatteryBackend(
             self.config, self.caps, self.push_transient_event, self._on_power_state_changed
@@ -428,6 +429,7 @@ class DynamicIslandDaemon:
         winner.share_targets = getattr(self, "active_share_targets", [])
         winner.running_windows = self.window_monitor.get_windows()
         winner.selected_minimized_index = self.selected_minimized_index
+        winner.mic_active = getattr(self.audio_backend, "mic_active", False)
 
         # Determine secondary accessory state for dual-split capsule (Apple Dynamic Island accessory pill)
         mins = self.window_monitor.get_minimized_windows()
@@ -1114,6 +1116,27 @@ class DynamicIslandDaemon:
         elif action in ("volume_mute", "mute"):
             await self.audio_backend.volume_mute()
             return {"version": 1, "status": "ok", "message": "Toggled volume mute"}
+
+        elif action in ("audio_sinks", "audio_sinks_get", "sinks"):
+            sinks = await self.audio_backend.get_sinks()
+            return {"version": 1, "status": "ok", "sinks": sinks}
+
+        elif action in ("audio_sink_set", "sink_set"):
+            target_sink = params[0] if params else args.get("sink", "")
+            if not target_sink:
+                return {"version": 1, "status": "error", "message": "Missing sink name or id"}
+            success = await self.audio_backend.set_sink(str(target_sink))
+            return {"version": 1, "status": "ok" if success else "error", "sink": str(target_sink)}
+
+        elif action in ("mic_status", "mic_get"):
+            is_active = await self.audio_backend.is_mic_active()
+            return {"version": 1, "status": "ok", "active": is_active}
+
+        elif action in ("topbar_ui", "ui_open", "open_ui"):
+            target_ui = params[0] if params else args.get("target", "")
+            self.ipc_server.broadcast_stream(json.dumps({"ui_action": target_ui}, ensure_ascii=False))
+            return {"version": 1, "status": "ok", "target": target_ui}
+
 
         # 11. Brightness Controls
         elif action == "brightness_up":

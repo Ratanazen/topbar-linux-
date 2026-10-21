@@ -221,6 +221,7 @@ class IslandState:
     accessory_icon: str = ""
     accessory_label: str = ""
     accessory_visible: bool = False
+    mic_active: bool = False
 
     @property
     def is_expired(self) -> bool:
@@ -306,6 +307,10 @@ class IslandState:
             "minimize_style": getattr(config, "minimize_style", "scale"),
             "minimize_target": getattr(config, "minimize_target", "island"),
             "minimized_apps_visibility": getattr(config, "minimized_apps_visibility", "auto"),
+            "topbar_enabled": getattr(config, "topbar_enabled", True),
+            "topbar_height": getattr(config, "topbar_height", 30),
+            "notch_enabled": getattr(config, "notch_enabled", False),
+            "notch_width": getattr(config, "notch_width", 160),
             "art_url": getattr(self, "art_url", ""),
             "duration_str": getattr(self, "duration_str", ""),
             "position_str": getattr(self, "position_str", ""),
@@ -327,12 +332,14 @@ class IslandState:
             "accessory_icon": getattr(self, "accessory_icon", ""),
             "accessory_label": getattr(self, "accessory_label", ""),
             "accessory_visible": bool(getattr(self, "accessory_visible", False)),
+            "mic_active": bool(getattr(self, "mic_active", False)),
         }
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert state to raw dictionary for JSON serialization."""
         return {
             "event_id": self.event_id,
+            "mic_active": self.mic_active,
             "source": self.source,
             "state": self.state,
             "priority": int(self.priority),

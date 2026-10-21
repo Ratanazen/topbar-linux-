@@ -22,7 +22,7 @@ Item {
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: "⚙ Settings"
+                text: "󰒓 Settings"
                 color: Theme.textPrimary
                 font.pixelSize: 12
                 font.bold: true
@@ -35,14 +35,15 @@ Item {
 
                 Repeater {
                     model: [
-                        { label: "Theme", idx: 0, icon: "🎨" },
-                        { label: "Genie", idx: 1, icon: "🌀" },
-                        { label: "Windows", idx: 2, icon: "🪟" },
-                        { label: "System", idx: 3, icon: "🛡️" }
+                        { label: "Theme", idx: 0, icon: "󰏘" },
+                        { label: "Top Bar", idx: 1, icon: "󰍹" },
+                        { label: "Genie", idx: 2, icon: "󰘳" },
+                        { label: "Windows", idx: 3, icon: "󰖲" },
+                        { label: "System", idx: 4, icon: "󰒃" }
                     ]
 
                     Rectangle {
-                        width: 58
+                        width: 52
                         height: 22
                         radius: 5
                         color: root.activeTab === modelData.idx ? Qt.rgba(0.04, 0.52, 1.0, 0.35) : (tabHov.hovered ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(1, 1, 1, 0.05))
@@ -185,7 +186,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "📐"; font.pixelSize: 10 }
+                            Text { text: "󰔡"; color: Theme.accent; font.pixelSize: 10 }
                             Text {
                                 text: IslandBridge.presentationMode === "dynamic" ? "Mode: Dynamic" : "Mode: Stable Width"
                                 color: Theme.textPrimary
@@ -213,7 +214,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "✨"; font.pixelSize: 10 }
+                            Text { text: "󰘳"; color: Theme.accentCyan; font.pixelSize: 10 }
                             Text {
                                 text: IslandBridge.blurEnabled ? "Blur: Enabled" : "Blur: Disabled"
                                 color: Theme.textPrimary
@@ -255,7 +256,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 4
-                            Text { text: "🖼️"; font.pixelSize: 9 }
+                            Text { text: "󰸉"; color: Theme.accentGreen; font.pixelSize: 9 }
                             Text {
                                 text: "Wallpapers"
                                 color: Theme.textPrimary
@@ -278,7 +279,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 4
-                            Text { text: "🎲"; font.pixelSize: 9 }
+                            Text { text: "󰒝"; color: Theme.accentYellow; font.pixelSize: 9 }
                             Text {
                                 text: "Next Wall"
                                 color: Theme.accentGreen
@@ -301,7 +302,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 4
-                            Text { text: "🎨"; font.pixelSize: 9 }
+                            Text { text: "󰏘"; color: Theme.accent; font.pixelSize: 9 }
                             Text {
                                 text: "Theme GUI"
                                 color: Theme.accent
@@ -355,11 +356,178 @@ Item {
             }
 
             // =================================================================
-            // TAB 1: GENIE & ANIMATION PROFILES
+            // TAB 1: TOP BAR & NOTCH SETTINGS
             // =================================================================
             Column {
                 anchors.fill: parent
                 visible: root.activeTab === 1
+                spacing: 8
+
+                Text {
+                    text: "TOP BAR DISPLAY"
+                    color: Theme.textSecondary
+                    font.pixelSize: 9
+                    font.bold: true
+                }
+
+                Row {
+                    spacing: 6
+                    width: parent.width
+
+                    // Top Bar Toggle
+                    Rectangle {
+                        width: (parent.width - 6) / 2
+                        height: 28
+                        radius: 6
+                        color: tbHov.hovered ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.07)
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 5
+                            Text { text: "󰍹"; color: Theme.accent; font.pixelSize: 10 }
+                            Text {
+                                text: IslandBridge.topBarEnabled ? "Top Bar: Enabled" : "Top Bar: Disabled"
+                                color: Theme.textPrimary
+                                font.pixelSize: 9
+                                font.bold: true
+                            }
+                        }
+
+                        HoverHandler { id: tbHov }
+                        TapHandler {
+                            onTapped: {
+                                IslandBridge.topBarEnabled = !IslandBridge.topBarEnabled;
+                                IslandBridge.setSetting("topbar_enabled", IslandBridge.topBarEnabled);
+                            }
+                        }
+                    }
+
+                    // Notch Safe Area Toggle
+                    Rectangle {
+                        width: (parent.width - 6) / 2
+                        height: 28
+                        radius: 6
+                        color: notchHov.hovered ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.07)
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 5
+                            Text { text: "󰌌"; color: Theme.accentCyan; font.pixelSize: 10 }
+                            Text {
+                                text: IslandBridge.notchEnabled ? "Notch: Active" : "Notch: Disabled"
+                                color: Theme.textPrimary
+                                font.pixelSize: 9
+                                font.bold: true
+                            }
+                        }
+
+                        HoverHandler { id: notchHov }
+                        TapHandler {
+                            onTapped: {
+                                IslandBridge.notchEnabled = !IslandBridge.notchEnabled;
+                                IslandBridge.setSetting("notch_enabled", IslandBridge.notchEnabled);
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: "BAR HEIGHT PRESET"
+                    color: Theme.textSecondary
+                    font.pixelSize: 9
+                    font.bold: true
+                }
+
+                Row {
+                    spacing: 6
+                    width: parent.width
+
+                    Repeater {
+                        model: [
+                            { h: 28, label: "28 px (Slim)" },
+                            { h: 30, label: "30 px (Default)" },
+                            { h: 32, label: "32 px (Comfort)" }
+                        ]
+
+                        Rectangle {
+                            width: (parent.width - 12) / 3
+                            height: 26
+                            radius: 6
+                            color: IslandBridge.topBarHeight === modelData.h ? Qt.rgba(0.04, 0.52, 1.0, 0.35) : (hHov.hovered ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06))
+                            border.color: IslandBridge.topBarHeight === modelData.h ? Theme.accent : "transparent"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                color: IslandBridge.topBarHeight === modelData.h ? Theme.accent : Theme.textPrimary
+                                font.pixelSize: 9
+                                font.bold: IslandBridge.topBarHeight === modelData.h
+                            }
+
+                            HoverHandler { id: hHov }
+                            TapHandler {
+                                onTapped: {
+                                    IslandBridge.topBarHeight = modelData.h;
+                                    IslandBridge.setSetting("topbar_height", modelData.h);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: "NOTCH WIDTH (CAMERA CUTOUT AVOIDANCE)"
+                    color: Theme.textSecondary
+                    font.pixelSize: 9
+                    font.bold: true
+                }
+
+                Row {
+                    spacing: 6
+                    width: parent.width
+
+                    Repeater {
+                        model: [
+                            { w: 120, label: "120 px" },
+                            { w: 160, label: "160 px" },
+                            { w: 200, label: "200 px" }
+                        ]
+
+                        Rectangle {
+                            width: (parent.width - 12) / 3
+                            height: 26
+                            radius: 6
+                            color: IslandBridge.notchWidth === modelData.w ? Qt.rgba(0.04, 0.52, 1.0, 0.35) : (wHov.hovered ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06))
+                            border.color: IslandBridge.notchWidth === modelData.w ? Theme.accent : "transparent"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                color: IslandBridge.notchWidth === modelData.w ? Theme.accent : Theme.textPrimary
+                                font.pixelSize: 9
+                                font.bold: IslandBridge.notchWidth === modelData.w
+                            }
+
+                            HoverHandler { id: wHov }
+                            TapHandler {
+                                onTapped: {
+                                    IslandBridge.notchWidth = modelData.w;
+                                    IslandBridge.setSetting("notch_width", modelData.w);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // =================================================================
+            // TAB 2: GENIE & ANIMATION PROFILES
+            // =================================================================
+            Column {
+                anchors.fill: parent
+                visible: root.activeTab === 2
                 spacing: 7
 
                 Text {
@@ -377,7 +545,7 @@ Item {
 
                     Repeater {
                         model: [
-                            { id: "macos-lamp", label: "Magic Lamp 🪔" },
+                            { id: "macos-lamp", label: "Magic Lamp (macOS)" },
                             { id: "macos-genie-inspired", label: "Mac Genie" },
                             { id: "originos-spring", label: "OriginOS Spring" },
                             { id: "originos-morph", label: "Morph Pill" },
@@ -490,11 +658,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 2: WINDOWS & DOCK
+            // TAB 3: WINDOWS & DOCK
             // =================================================================
             Column {
                 anchors.fill: parent
-                visible: root.activeTab === 2
+                visible: root.activeTab === 3
                 spacing: 7
 
                 Text {
@@ -518,7 +686,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "💊"; font.pixelSize: 10 }
+                            Text { text: "󰀻"; color: Theme.accent; font.pixelSize: 10 }
                             Text {
                                 text: "Single Capsule (iOS)"
                                 color: Theme.textPrimary
@@ -545,7 +713,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "🗂️"; font.pixelSize: 10 }
+                            Text { text: "󰉋"; color: Theme.accentCyan; font.pixelSize: 10 }
                             Text {
                                 text: "View Minimized Apps"
                                 color: Theme.accent
@@ -665,11 +833,11 @@ Item {
             }
 
             // =================================================================
-            // TAB 3: PRIVACY & SYSTEM
+            // TAB 4: PRIVACY & SYSTEM
             // =================================================================
             Column {
                 anchors.fill: parent
-                visible: root.activeTab === 3
+                visible: root.activeTab === 4
                 spacing: 7
 
                 Text {
@@ -693,7 +861,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "🔒"; font.pixelSize: 10 }
+                            Text { text: "󰌾"; color: Theme.accentYellow; font.pixelSize: 10 }
                             Text {
                                 text: IslandBridge.networkSsidPrivacy ? "SSID: Masked" : "SSID: Visible"
                                 color: Theme.textPrimary
@@ -722,7 +890,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "🛡️"; font.pixelSize: 10 }
+                            Text { text: "󰒃"; color: "#4cd964"; font.pixelSize: 10 }
                             Text {
                                 text: "Clipboard: Zero Leakage"
                                 color: "#4cd964"
@@ -756,7 +924,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: "🩺"; font.pixelSize: 10 }
+                            Text { text: "󰓅"; color: Theme.accentCyan; font.pixelSize: 10 }
                             Text {
                                 text: "Run Health Check"
                                 color: Theme.textPrimary
@@ -786,7 +954,7 @@ Item {
                         Row {
                             anchors.centerIn: parent
                             spacing: 5
-                            Text { text: root.confirmReset ? "⚠️" : "🔄"; font.pixelSize: 10 }
+                            Text { text: root.confirmReset ? "󰀦" : "󰑐"; color: root.confirmReset ? "#ff3b30" : Theme.accentRed; font.pixelSize: 10 }
                             Text {
                                 text: root.confirmReset ? "Click to Confirm" : "Restore Defaults"
                                 color: root.confirmReset ? "#ff3b30" : Theme.textPrimary

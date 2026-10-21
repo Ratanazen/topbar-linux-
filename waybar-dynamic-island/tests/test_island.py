@@ -1725,6 +1725,92 @@ class TestV4TransparencyAndInteractions(unittest.TestCase):
         self.assertIn("appLauncherComponent.createObject", content)
 
 
+class TestMacTopBarShell(unittest.TestCase):
+    """Tests for macOS Top Bar, popovers, mic detection, and audio sink switching"""
+
+    def setUp(self):
+        self.config = IslandConfig(Path("/tmp/test_topbar_config.ini"))
+        self.state = IslandState(self.config)
+        self.daemon = DynamicIslandDaemon(config=self.config)
+
+    def test_topbar_config_and_state_defaults(self):
+        self.assertTrue(hasattr(self.config, "topbar_enabled"))
+        self.assertTrue(hasattr(self.config, "topbar_height"))
+        self.assertTrue(hasattr(self.config, "notch_enabled"))
+        self.assertTrue(hasattr(self.config, "notch_width"))
+        self.assertEqual(self.config.topbar_height, 30)
+
+        payload = self.state.to_waybar_payload(self.config)
+        self.assertIn("topbar_enabled", payload)
+        self.assertIn("topbar_height", payload)
+        self.assertIn("notch_enabled", payload)
+        self.assertIn("notch_width", payload)
+        self.assertIn("mic_active", payload)
+
+    def test_audio_sinks_ipc_dispatch(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with patch.object(self.daemon.audio_backend, "get_sinks", new_callable=AsyncMock) as mock_get_sinks:
+                mock_get_sinks.return_value = [
+                    {"id": "1", "name": "alsa_output.pci", "description": "Internal Speakers", "is_default": True}
+                ]
+                res = loop.run_until_complete(self.daemon.dispatch_action("audio_sinks", [], None))
+                self.assertEqual(res["status"], "ok")
+                self.assertEqual(len(res["sinks"]), 1)
+                self.assertEqual(res["sinks"][0]["description"], "Internal Speakers")
+        finally:
+            loop.close()
+
+    def test_audio_sink_set_ipc_dispatch(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with patch.object(self.daemon.audio_backend, "set_sink", new_callable=AsyncMock) as mock_set:
+                mock_set.return_value = True
+                res = loop.run_until_complete(self.daemon.dispatch_action("audio_sink_set", ["1"], None))
+                self.assertEqual(res["status"], "ok")
+                self.assertEqual(res["sink"], "1")
+                mock_set.assert_called_once_with("1")
+        finally:
+            loop.close()
+
+    def test_mic_status_ipc_dispatch(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with patch.object(self.daemon.audio_backend, "is_mic_active", new_callable=AsyncMock) as mock_mic:
+                mock_mic.return_value = True
+                res = loop.run_until_complete(self.daemon.dispatch_action("mic_status", [], None))
+                self.assertEqual(res["status"], "ok")
+                self.assertTrue(res["active"])
+        finally:
+            loop.close()
+
+    def test_topbar_ui_broadcast_dispatch(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with patch.object(self.daemon.ipc_server, "broadcast_stream") as mock_broadcast:
+                res = loop.run_until_complete(self.daemon.dispatch_action("topbar_ui", ["control_center"], None))
+                self.assertEqual(res["status"], "ok")
+                self.assertEqual(res["target"], "control_center")
+                mock_broadcast.assert_called_once()
+                call_arg = mock_broadcast.call_args[0][0]
+                self.assertIn("control_center", call_arg)
+        finally:
+            loop.close()
+
+    def test_qml_topbar_files_exist(self):
+        components_dir = REPO_DIR / "quickshell" / "components"
+        required_files = [
+            "MacTopBar.qml",
+            "AudioOutputPopover.qml",
+            "CalendarPopover.qml",
+            "BatteryPopover.qml",
+            "SystemMenuView.qml"
+        ]
+        for f in required_files:
+            file_path = components_dir / f
+            self.assertTrue(file_path.exists(), f"Missing required QML component: {f}")
+
+
 if __name__ == "__main__":
     unittest.main()
 

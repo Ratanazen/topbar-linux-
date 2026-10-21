@@ -83,6 +83,10 @@ class IslandConfig:
         self.idle_show_language: bool = True
         self.language_format: str = "both"  # 'both', 'origin', 'full', 'short'
         self.frontend: str = "waybar"  # 'waybar', 'quickshell', 'both', 'hybrid'
+        self.topbar_enabled: bool = True
+        self.topbar_height: int = 30
+        self.notch_enabled: bool = False
+        self.notch_width: int = 160
 
         # Dock configuration
         self.dock_enabled: bool = False
@@ -211,6 +215,10 @@ class IslandConfig:
                 self.reduced_motion = gen.getboolean("reduced_motion", self.reduced_motion)
                 self.show_full = gen.getboolean("show_full", self.show_full)
                 self.frontend = gen.get("frontend", self.frontend)
+                self.topbar_enabled = gen.getboolean("topbar_enabled", self.topbar_enabled)
+                self.topbar_height = gen.getint("topbar_height", self.topbar_height)
+                self.notch_enabled = gen.getboolean("notch_enabled", self.notch_enabled)
+                self.notch_width = gen.getint("notch_width", self.notch_width)
 
             if "Dock" in parser:
                 dk = parser["Dock"]
@@ -298,6 +306,10 @@ class IslandConfig:
             "monitor": self.monitor,
             "reduced_motion": str(self.reduced_motion).lower(),
             "show_full": str(self.show_full).lower(),
+            "topbar_enabled": str(self.topbar_enabled).lower(),
+            "topbar_height": str(self.topbar_height),
+            "notch_enabled": str(self.notch_enabled).lower(),
+            "notch_width": str(self.notch_width),
         }
         parser["Dock"] = {
             "dock_enabled": str(self.dock_enabled).lower(),
