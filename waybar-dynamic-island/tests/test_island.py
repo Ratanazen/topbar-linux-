@@ -922,6 +922,77 @@ class TestSwayWindowInteractions(unittest.TestCase):
             self.assertIn("window_anim", sent_payload)
             self.assertEqual(sent_payload["window_anim"]["type"], "restore")
 
+    def test_17_state_machine_and_transitions(self):
+        from core.priority_manager import is_valid_state, is_valid_transition, VALID_STATES
+        required_states = [
+            "idle", "compact", "expanded",
+            "minimize_detected", "minimize_animating", "minimized_apps",
+            "restore_detected", "restore_animating",
+            "drag_enter", "drag_active", "share_picker", "share_confirm", "share_launching", "share_error",
+            "media_expanded", "quick_settings", "notification"
+        ]
+        for st in required_states:
+            self.assertTrue(is_valid_state(st), f"State '{st}' must be valid in VALID_STATES")
+
+        # Test valid transitions
+        self.assertTrue(is_valid_transition("idle", "drag_enter"))
+        self.assertTrue(is_valid_transition("drag_enter", "drag_active"))
+        self.assertTrue(is_valid_transition("drag_active", "share_picker"))
+        self.assertTrue(is_valid_transition("share_picker", "share_confirm"))
+        self.assertTrue(is_valid_transition("share_confirm", "share_launching"))
+        self.assertTrue(is_valid_transition("minimize_detected", "minimize_animating"))
+        self.assertTrue(is_valid_transition("minimize_animating", "minimized_apps"))
+        self.assertTrue(is_valid_transition("minimized_apps", "restore_detected"))
+        self.assertTrue(is_valid_transition("restore_detected", "restore_animating"))
+        self.assertTrue(is_valid_transition("restore_animating", "idle"))
+
+        # Emergency preemption is always allowed
+        self.assertTrue(is_valid_transition("minimized_apps", "recording"))
+        self.assertTrue(is_valid_transition("media_expanded", "error"))
+
+    def test_animation_style_normalization_and_targets(self):
+        normalize = IslandConfig.normalize_minimize_style
+        self.assertEqual(normalize("genie"), "genie")
+        self.assertEqual(normalize("genie-inspired"), "genie")
+        self.assertEqual(normalize("macos-genie"), "genie")
+        self.assertEqual(normalize("scale"), "scale")
+        self.assertEqual(normalize("macos-scale"), "scale")
+        self.assertEqual(normalize("scale-fade"), "scale-fade")
+        self.assertEqual(normalize("fade"), "scale-fade")
+        self.assertEqual(normalize("spring"), "spring")
+        self.assertEqual(normalize("bounce"), "spring")
+        self.assertEqual(normalize("reduced-motion"), "reduced-motion")
+        self.assertEqual(normalize("subtle"), "reduced-motion")
+        self.assertEqual(normalize("none"), "none")
+
+    def test_minimized_apps_and_window_ipc_actions(self):
+        loop = asyncio.new_event_loop()
+        try:
+            # Test window_style action
+            res_style = loop.run_until_complete(self.daemon.dispatch_action("window_style", {"subcommand": "set", "style": "genie"}, None))
+            self.assertEqual(res_style["status"], "ok")
+            self.assertEqual(res_style["style"], "genie")
+            self.assertEqual(self.daemon.config.minimize_style, "genie")
+
+            # Test window_target action
+            res_target = loop.run_until_complete(self.daemon.dispatch_action("window_target", {"subcommand": "set", "target": "dock"}, None))
+            self.assertEqual(res_target["status"], "ok")
+            self.assertEqual(res_target["target"], "dock")
+            self.assertEqual(self.daemon.config.minimize_target, "dock")
+
+            # Test position action
+            res_pos = loop.run_until_complete(self.daemon.dispatch_action("position", {"subcommand": "set", "position": "top-left"}, None))
+            self.assertEqual(res_pos["status"], "ok")
+            self.assertEqual(res_pos["position"], "top-left")
+            self.assertEqual(self.daemon.config.position, "top-left")
+
+            # Test minimized_apps_show action
+            res_min = loop.run_until_complete(self.daemon.dispatch_action("minimized_apps_show", {}, None))
+            self.assertEqual(res_min["status"], "ok")
+            self.assertEqual(self.daemon.get_current_state().state, "minimized_apps")
+        finally:
+            loop.close()
+
 
 if __name__ == "__main__":
     unittest.main()

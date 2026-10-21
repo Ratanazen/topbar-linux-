@@ -31,8 +31,8 @@ ShellRoot {
                 anchors.left: true
                 anchors.right: true
 
-                // Ample headroom for morphing expansions
-                implicitHeight: 260
+                // Ample headroom for morphing expansions (sharePicker, minimizedApps, etc.)
+                implicitHeight: 380
                 color: "transparent"
 
                 // Wayland Input Mask: Clicks outside the active capsule pass through!

@@ -5,10 +5,14 @@ import "../themes"
 Rectangle {
     id: root
 
-    // Anchoring at top-center of the screen
+    // Configurable Screen Placement
     anchors.top: parent.top
-    anchors.horizontalCenter: parent.horizontalCenter
     anchors.topMargin: 3
+    anchors.horizontalCenter: (IslandBridge.capsulePosition === "top-center" || !IslandBridge.capsulePosition) ? parent.horizontalCenter : undefined
+    anchors.left: IslandBridge.capsulePosition === "top-left" ? parent.left : undefined
+    anchors.leftMargin: IslandBridge.capsulePosition === "top-left" ? 24 : 0
+    anchors.right: IslandBridge.capsulePosition === "top-right" ? parent.right : undefined
+    anchors.rightMargin: IslandBridge.capsulePosition === "top-right" ? 24 : 0
     focus: true
     clip: true
 
@@ -22,9 +26,12 @@ Rectangle {
             case "sharePicker": baseWidth = 460; break;
             case "dragActive": baseWidth = 340; break;
             case "settings": baseWidth = 360; break;
-            case "quickActions": baseWidth = 380; break;
+            case "quickActions":
+            case "quick_settings": baseWidth = 380; break;
             case "expanded": baseWidth = 360; break;
-            case "mediaExpanded": baseWidth = 380; break;
+            case "minimized_apps": baseWidth = 380; break;
+            case "mediaExpanded":
+            case "media_expanded": baseWidth = 380; break;
             case "notification": baseWidth = 360; break;
             case "bluetooth": baseWidth = 280; break;
             case "language": baseWidth = 280; break;
@@ -65,10 +72,13 @@ Rectangle {
         switch (IslandBridge.visualState) {
             case "sharePicker": return 330;
             case "dragActive": return 56;
-            case "mediaExpanded": return 134;
+            case "minimized_apps": return 240;
+            case "mediaExpanded":
+            case "media_expanded": return 134;
             case "expanded": return (IslandBridge.minimizedWindows && IslandBridge.minimizedWindows.length > 0) ? 142 : 126;
             case "settings": return 118;
-            case "quickActions": return 220;
+            case "quickActions":
+            case "quick_settings": return 220;
             case "notification": return 60;
             case "volume":
             case "brightness":
@@ -94,10 +104,13 @@ Rectangle {
         switch (IslandBridge.visualState) {
             case "sharePicker": return 24;
             case "dragActive": return 22;
-            case "mediaExpanded": return 24;
+            case "minimized_apps": return 22;
+            case "mediaExpanded":
+            case "media_expanded": return 24;
             case "expanded": return 22;
             case "settings": return 20;
-            case "quickActions": return 22;
+            case "quickActions":
+            case "quick_settings": return 22;
             case "notification": return 20;
             default: return 19;
         }
@@ -107,7 +120,8 @@ Rectangle {
     height: targetHeight
     radius: targetRadius
 
-    color: Theme.background
+    // Fallback crisp opaque glass styling when compositor blur is disabled or unsupported
+    color: IslandBridge.blurEnabled ? Theme.background : Qt.rgba(0.08, 0.08, 0.1, 0.98)
     border.color: {
         if (dropArea.containsDrag || contentHost.isDragHovered || IslandBridge.visualState === "dragActive")
             return Theme.accent;

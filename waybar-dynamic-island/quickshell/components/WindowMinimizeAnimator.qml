@@ -32,6 +32,8 @@ PanelWindow {
     // Active animation state
     property bool isAnimating: false
     property string animType: "minimize" // "minimize" or "restore"
+    property string animStyle: "scale"   // "genie", "scale", "scale-fade", "spring", "reduced-motion", "none"
+    property string animTarget: "island" // "island" or "dock"
     property string appIcon: "󰖲"
     property string appTitle: ""
     property int animDuration: 380
@@ -64,14 +66,26 @@ PanelWindow {
             var y = r.y >= 0 ? r.y : 60;
 
             animType = data.type || "minimize";
+            animStyle = (data.style || "scale").toLowerCase();
+            animTarget = (data.target || "island").toLowerCase();
             appIcon = data.icon || "󰖲";
             appTitle = data.title || data.app_id || "Window";
             animDuration = data.duration || 380;
 
-            var islandX = (screenTarget.width - 180) / 2;
-            var islandY = 3;
-            var islandW = 180;
-            var islandH = 38;
+            // Target destination coordinates
+            var destX = (screenTarget.width - 180) / 2;
+            var destY = 3;
+            var destW = 180;
+            var destH = 38;
+            var destR = 19;
+
+            if (animTarget === "dock") {
+                destX = (screenTarget.width - 340) / 2;
+                destY = screenTarget.height - 62;
+                destW = 340;
+                destH = 50;
+                destR = 18;
+            }
 
             if (animType === "minimize") {
                 startX = x;
@@ -81,18 +95,18 @@ PanelWindow {
                 startR = 12;
                 startOp = 0.92;
 
-                endX = islandX;
-                endY = islandY;
-                endW = islandW;
-                endH = islandH;
-                endR = 19;
+                endX = destX;
+                endY = destY;
+                endW = destW;
+                endH = destH;
+                endR = destR;
                 endOp = 0.0;
             } else { // restore
-                startX = islandX;
-                startY = islandY;
-                startW = islandW;
-                startH = islandH;
-                startR = 19;
+                startX = destX;
+                startY = destY;
+                startW = destW;
+                startH = destH;
+                startR = destR;
                 startOp = 0.05;
 
                 endX = x;
@@ -110,6 +124,12 @@ PanelWindow {
             animCard.height = startH;
             animCard.radius = startR;
             animCard.opacity = startOp;
+
+            // Handle "none" style (instant)
+            if (animStyle === "none") {
+                animCard.opacity = 0.0;
+                return;
+            }
 
             cardAnim.restart();
         }
@@ -160,6 +180,23 @@ PanelWindow {
         }
     }
 
+    readonly property int effectiveDuration: {
+        if (animStyle === "none") return 0;
+        if (animStyle === "reduced-motion" || IslandBridge.reducedMotion) return 80;
+        return animDuration;
+    }
+
+    readonly property var xEasing: {
+        if (animStyle === "genie") return Easing.InBack;
+        if (animStyle === "spring") return Easing.OutBack;
+        return Easing.InOutCubic;
+    }
+
+    readonly property var yEasing: {
+        if (animStyle === "spring") return Easing.OutBack;
+        return Easing.InOutCubic;
+    }
+
     ParallelAnimation {
         id: cardAnim
 
@@ -167,31 +204,33 @@ PanelWindow {
             target: animCard
             property: "x"
             to: endX
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
-            easing.type: Easing.InOutCubic
+            duration: effectiveDuration
+            easing.type: xEasing
+            easing.overshoot: animStyle === "spring" ? 1.25 : 1.0
         }
 
         NumberAnimation {
             target: animCard
             property: "y"
             to: endY
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
-            easing.type: Easing.InOutCubic
+            duration: effectiveDuration
+            easing.type: yEasing
+            easing.overshoot: animStyle === "spring" ? 1.25 : 1.0
         }
 
         NumberAnimation {
             target: animCard
             property: "width"
             to: endW
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
-            easing.type: Easing.InOutCubic
+            duration: effectiveDuration
+            easing.type: animStyle === "genie" ? Easing.InQuad : Easing.InOutCubic
         }
 
         NumberAnimation {
             target: animCard
             property: "height"
             to: endH
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
+            duration: effectiveDuration
             easing.type: Easing.InOutCubic
         }
 
@@ -199,7 +238,7 @@ PanelWindow {
             target: animCard
             property: "radius"
             to: endR
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
+            duration: effectiveDuration
             easing.type: Easing.InOutCubic
         }
 
@@ -207,8 +246,8 @@ PanelWindow {
             target: animCard
             property: "opacity"
             to: endOp
-            duration: IslandBridge.reducedMotion ? 120 : animDuration
-            easing.type: animType === "minimize" ? Easing.InQuad : Easing.OutQuad
+            duration: effectiveDuration
+            easing.type: (animStyle === "scale-fade" || animType === "minimize") ? Easing.InQuad : Easing.OutQuad
         }
 
         onFinished: {

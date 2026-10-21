@@ -97,7 +97,13 @@ Item {
         visible: !root.isDragHovered && IslandBridge.visualState === "sharePicker"
     }
 
-    // 14. Transient Event View (Network, Battery, Charging, Clipboard, Task, Language, System, Window Animation, Error)
+    // 14. Minimized Applications Full Manager View
+    MinimizedAppsView {
+        id: minAppsView
+        visible: !root.isDragHovered && IslandBridge.visualState === "minimized_apps"
+    }
+
+    // 15. Transient Event View (Network, Battery, Charging, Clipboard, Task, Language, System, Window Animation, Error)
     EventView {
         id: eventView
         visible: !root.isDragHovered && (
@@ -111,7 +117,11 @@ Item {
                  IslandBridge.visualState === "system" ||
                  IslandBridge.visualState === "language" ||
                  IslandBridge.visualState === "windowAnimation" ||
+                 IslandBridge.visualState === "minimize_detected" ||
+                 IslandBridge.visualState === "minimize_animating" ||
                  IslandBridge.visualState === "minimized" ||
+                 IslandBridge.visualState === "restore_detected" ||
+                 IslandBridge.visualState === "restore_animating" ||
                  IslandBridge.visualState === "restoring" ||
                  IslandBridge.visualState === "share_launching" ||
                  IslandBridge.visualState === "share_error" ||

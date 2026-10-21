@@ -60,6 +60,8 @@ class IslandConfig:
         self.presentation_mode: str = "stable-width"
         self.compact_width: int = 160
         self.expanded_width: int = 280
+        self.position: str = "top-center"  # 'top-center', 'top-left', 'top-right'
+        self.blur_enabled: bool = True
         self.monitor: str = ""
         self.reduced_motion: bool = False
         self.show_full: bool = False
@@ -98,10 +100,11 @@ class IslandConfig:
 
         # Window Minimize / Restore Animation Configuration
         self.minimize_animation_enabled: bool = True
-        self.minimize_style: str = "macos-scale"  # 'macos-scale', 'macos-genie-inspired', 'macos-fade', 'minimize-to-island', 'minimize-to-dock', 'subtle', 'none'
-        self.minimize_target: str = "island"      # 'island' or 'dock'
+        self.minimize_style: str = "scale"  # 'genie', 'scale', 'scale-fade', 'spring', 'reduced-motion', 'none'
+        self.minimize_target: str = "island"  # 'island' or 'dock'
         self.minimize_duration_ms: int = 380
         self.minimize_highlight: bool = True
+        self.minimized_apps_visibility: str = "auto"  # 'auto', 'compact', 'expanded', 'hidden'
         self.minimize_exclusions: List[str] = []
 
         # Privacy & Timeouts
@@ -127,6 +130,24 @@ class IslandConfig:
 
         self.load()
 
+    @staticmethod
+    def normalize_minimize_style(style_name: str) -> str:
+        """Map human or legacy style strings to canonical style tokens."""
+        s = str(style_name).strip().lower()
+        if s in ("genie", "genie-inspired", "macos-genie", "macos-genie-inspired"):
+            return "genie"
+        if s in ("scale", "macos-scale", "minimize-to-island", "minimize-to-dock"):
+            return "scale"
+        if s in ("scale-fade", "scale_fade", "macos-fade", "fade"):
+            return "scale-fade"
+        if s in ("spring", "bounce", "elastic"):
+            return "spring"
+        if s in ("reduced-motion", "reduced_motion", "subtle"):
+            return "reduced-motion"
+        if s in ("none", "disabled", "off"):
+            return "none"
+        return "scale"
+
     def apply_profile(self, profile_name: str):
         """Configure parameters dynamically based on selected performance profile."""
         p = profile_name.lower().strip()
@@ -135,24 +156,27 @@ class IslandConfig:
             self.idle_clock_interval_s = 30.0
             self.metrics_interval_s = 6.0
             self.reduced_motion = True
+            self.blur_enabled = False
             self.minimize_duration_ms = 180
-            self.minimize_style = "macos-fade"
+            self.minimize_style = "scale-fade"
             self.max_cached_images = 8
         elif p == "visual-quality":
             self.performance_profile = "visual-quality"
             self.idle_clock_interval_s = 5.0
             self.metrics_interval_s = 2.0
             self.reduced_motion = False
+            self.blur_enabled = True
             self.minimize_duration_ms = 420
-            self.minimize_style = "macos-scale"
+            self.minimize_style = "genie"
             self.max_cached_images = 64
         else:  # balanced
             self.performance_profile = "balanced"
             self.idle_clock_interval_s = 15.0
             self.metrics_interval_s = 3.0
             self.reduced_motion = False
+            self.blur_enabled = True
             self.minimize_duration_ms = 380
-            self.minimize_style = "macos-scale"
+            self.minimize_style = "scale"
             self.max_cached_images = 24
 
     def load(self):
@@ -171,6 +195,8 @@ class IslandConfig:
                 self.presentation_mode = gen.get("presentation_mode", self.presentation_mode)
                 self.compact_width = gen.getint("compact_width", self.compact_width)
                 self.expanded_width = gen.getint("expanded_width", self.expanded_width)
+                self.position = gen.get("position", self.position)
+                self.blur_enabled = gen.getboolean("blur_enabled", self.blur_enabled)
                 self.monitor = gen.get("monitor", self.monitor)
                 self.reduced_motion = gen.getboolean("reduced_motion", self.reduced_motion)
                 self.show_full = gen.getboolean("show_full", self.show_full)
@@ -236,10 +262,11 @@ class IslandConfig:
             if "WindowManagement" in parser:
                 wm = parser["WindowManagement"]
                 self.minimize_animation_enabled = wm.getboolean("minimize_animation_enabled", self.minimize_animation_enabled)
-                self.minimize_style = wm.get("minimize_style", self.minimize_style)
+                self.minimize_style = self.normalize_minimize_style(wm.get("minimize_style", self.minimize_style))
                 self.minimize_target = wm.get("minimize_target", self.minimize_target)
                 self.minimize_duration_ms = wm.getint("minimize_duration_ms", self.minimize_duration_ms)
                 self.minimize_highlight = wm.getboolean("minimize_highlight", self.minimize_highlight)
+                self.minimized_apps_visibility = wm.get("minimized_apps_visibility", self.minimized_apps_visibility)
 
             log.info(f"Loaded configuration from {self.config_file} (mode={self.mode}, theme={self.theme}, full={self.show_full})")
         except Exception as e:
@@ -256,6 +283,8 @@ class IslandConfig:
             "presentation_mode": self.presentation_mode,
             "compact_width": str(self.compact_width),
             "expanded_width": str(self.expanded_width),
+            "position": self.position,
+            "blur_enabled": str(self.blur_enabled).lower(),
             "monitor": self.monitor,
             "reduced_motion": str(self.reduced_motion).lower(),
             "show_full": str(self.show_full).lower(),
@@ -313,6 +342,7 @@ class IslandConfig:
             "minimize_target": self.minimize_target,
             "minimize_duration_ms": str(self.minimize_duration_ms),
             "minimize_highlight": str(self.minimize_highlight).lower(),
+            "minimized_apps_visibility": self.minimized_apps_visibility,
         }
         temp_file = self.config_file.with_suffix(".tmp")
         try:

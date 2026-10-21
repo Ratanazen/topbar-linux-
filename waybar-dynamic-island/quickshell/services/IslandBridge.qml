@@ -55,6 +55,13 @@ QtObject {
     property var minimizedWindows: []
     signal windowAnimationRequested(var animData)
 
+    // Layout, Positioning & Style Options
+    property string capsulePosition: "top-center"
+    property bool blurEnabled: true
+    property string minimizeStyle: "scale"
+    property string minimizeTarget: "island"
+    property string minimizedAppsVisibility: "auto"
+
     // UI Interactive Overrides
     property bool userExpanded: false
     property bool quickActionsOpen: false
@@ -70,8 +77,14 @@ QtObject {
             visualState = "dragActive";
         } else if (activeState === "share_picker") {
             visualState = "sharePicker";
-        } else if (activeState === "minimized" || activeState === "restoring") {
+        } else if (activeState === "minimized_apps") {
+            visualState = "minimized_apps";
+        } else if (activeState === "minimized" || activeState === "restoring" || activeState === "minimize_detected" || activeState === "minimize_animating" || activeState === "restore_detected" || activeState === "restore_animating") {
             visualState = "windowAnimation";
+        } else if (activeState === "quick_settings") {
+            visualState = "quickActions";
+        } else if (activeState === "media_expanded") {
+            visualState = "mediaExpanded";
         } else if (userExpanded && (activeState === "media" || activeState === "idle")) {
             visualState = "mediaExpanded";
         } else if (userExpanded) {
@@ -154,8 +167,20 @@ QtObject {
                         if (msg.dropped_files !== undefined) {
                             root.droppedFiles = msg.dropped_files || [];
                         }
-                        if (msg.share_targets !== undefined) {
-                            root.shareTargets = msg.share_targets || [];
+                        if (msg.capsule_position !== undefined && root.capsulePosition !== msg.capsule_position) {
+                            root.capsulePosition = msg.capsule_position;
+                        }
+                        if (msg.blur_enabled !== undefined && root.blurEnabled !== Boolean(msg.blur_enabled)) {
+                            root.blurEnabled = Boolean(msg.blur_enabled);
+                        }
+                        if (msg.minimize_style !== undefined && root.minimizeStyle !== msg.minimize_style) {
+                            root.minimizeStyle = msg.minimize_style;
+                        }
+                        if (msg.minimize_target !== undefined && root.minimizeTarget !== msg.minimize_target) {
+                            root.minimizeTarget = msg.minimize_target;
+                        }
+                        if (msg.minimized_apps_visibility !== undefined && root.minimizedAppsVisibility !== msg.minimized_apps_visibility) {
+                            root.minimizedAppsVisibility = msg.minimized_apps_visibility;
                         }
                         if (msg.window_anim !== undefined) {
                             root.windowAnimationRequested(msg.window_anim);

@@ -23,6 +23,9 @@ Usage:
     island-ctl task <add|done|next|clear|list> [title]
     island-ctl dnd toggle
     island-ctl theme <list|get|set> [name]
+    island-ctl position <top-center|top-left|top-right|get|set> [position]
+    island-ctl profile <get|set> <low-resource|balanced|visual-quality>
+    island-ctl windows <list|min|restore|style|target|manager|toggle> [args]
     island-ctl settings
     island-ctl menu
     island-ctl stream
@@ -735,6 +738,34 @@ def main():
             con_id = sys.argv[3] if len(sys.argv) > 3 else "0"
             res = send_ipc("window_restore", {"con_id": int(con_id)})
             print(res.get("message", "Window restored"))
+        elif sub in ("style", "anim-style"):
+            act = sys.argv[3].lower() if len(sys.argv) > 3 else "get"
+            if act in ("set", "switch") and len(sys.argv) > 4:
+                val = sys.argv[4]
+                res = send_ipc("window_style", {"subcommand": "set", "style": val})
+                print(res.get("message", f"Style set to {val}"))
+            elif act not in ("get", "status") and act:
+                # Direct shorthand: island-ctl windows style genie
+                res = send_ipc("window_style", {"subcommand": "set", "style": act})
+                print(res.get("message", f"Style set to {act}"))
+            else:
+                res = send_ipc("window_style", {"subcommand": "get"})
+                print(f"Active minimize style: {res.get('style', 'scale')} (options: genie, scale, scale-fade, spring, reduced-motion, none)")
+        elif sub in ("target", "anim-target"):
+            act = sys.argv[3].lower() if len(sys.argv) > 3 else "get"
+            if act in ("set", "switch") and len(sys.argv) > 4:
+                val = sys.argv[4]
+                res = send_ipc("window_target", {"subcommand": "set", "target": val})
+                print(res.get("message", f"Target set to {val}"))
+            elif act not in ("get", "status") and act:
+                res = send_ipc("window_target", {"subcommand": "set", "target": act})
+                print(res.get("message", f"Target set to {act}"))
+            else:
+                res = send_ipc("window_target", {"subcommand": "get"})
+                print(f"Active minimize target: {res.get('target', 'island')} (options: island, dock)")
+        elif sub in ("manager", "show-manager", "min-apps"):
+            res = send_ipc("minimized_apps_show")
+            print(res.get("message", "Showing minimized applications manager"))
         elif sub == "toggle":
             con_id = sys.argv[3] if len(sys.argv) > 3 else "0"
             res = send_ipc("window_toggle", {"con_id": int(con_id)})
@@ -748,8 +779,21 @@ def main():
             res = send_ipc("window_toggle_app", {"app_keyword": kw, "fallback_binary": fb})
             print(res.get("message", "App toggled"))
         else:
-            sys.stderr.write("Usage: island-ctl windows <list|minimize|restore|toggle|toggle-app> [args]\n")
+            sys.stderr.write("Usage: island-ctl windows <list|minimize|restore|style|target|manager|toggle|toggle-app> [args]\n")
             sys.exit(1)
+
+    elif cmd == "position":
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"
+        if sub in ("set", "switch") and len(sys.argv) > 3:
+            val = sys.argv[3]
+            res = send_ipc("position", {"subcommand": "set", "position": val})
+            print(res.get("message", f"Position set to {val}"))
+        elif sub not in ("get", "status") and sub:
+            res = send_ipc("position", {"subcommand": "set", "position": sub})
+            print(res.get("message", f"Position set to {sub}"))
+        else:
+            res = send_ipc("position", {"subcommand": "get"})
+            print(f"Active capsule position: {res.get('position', 'top-center')} (options: top-center, top-left, top-right)")
 
     elif cmd in ("profile", "perf"):
         sub = sys.argv[2].lower() if len(sys.argv) > 2 else "get"

@@ -1372,6 +1372,55 @@ class DynamicIslandDaemon:
                 "minimize_duration_ms": self.config.minimize_duration_ms,
             }
 
+        elif action == "window_style":
+            sub = args.get("subcommand") or (params[0] if params else "get")
+            if sub == "set":
+                target = args.get("style") or (params[1] if len(params) > 1 else "scale")
+                self.config.minimize_style = self.config.normalize_minimize_style(target)
+                self.config.save()
+                self.render_and_broadcast()
+                return {"version": 1, "status": "ok", "style": self.config.minimize_style, "message": f"Minimize style set to '{self.config.minimize_style}'"}
+            return {"version": 1, "status": "ok", "style": self.config.minimize_style}
+
+        elif action == "window_target":
+            sub = args.get("subcommand") or (params[0] if params else "get")
+            if sub == "set":
+                target = args.get("target") or (params[1] if len(params) > 1 else "island")
+                target = target.lower().strip()
+                if target in ("island", "dock"):
+                    self.config.minimize_target = target
+                    self.config.save()
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "target": target, "message": f"Minimize target set to '{target}'"}
+                return {"version": 1, "status": "error", "message": "Invalid target. Choose 'island' or 'dock'"}
+            return {"version": 1, "status": "ok", "target": self.config.minimize_target}
+
+        elif action == "position":
+            sub = args.get("subcommand") or (params[0] if params else "get")
+            if sub == "set":
+                target = args.get("position") or (params[1] if len(params) > 1 else "top-center")
+                target = target.lower().strip()
+                if target in ("top-center", "top-left", "top-right"):
+                    self.config.position = target
+                    self.config.save()
+                    self.render_and_broadcast()
+                    return {"version": 1, "status": "ok", "position": target, "message": f"Position set to '{target}'"}
+                return {"version": 1, "status": "error", "message": "Invalid position. Choose 'top-center', 'top-left', 'top-right'"}
+            return {"version": 1, "status": "ok", "position": self.config.position}
+
+        elif action in ("minimized_apps", "minimized_apps_show"):
+            min_state = IslandState(
+                event_id="min-apps-mgr",
+                source="window",
+                state="minimized_apps",
+                priority=Priority.WINDOW_MINIMIZE,
+                icon="󰖯",
+                title="Minimized Applications",
+                duration=None
+            )
+            self.push_transient_event(min_state)
+            return {"version": 1, "status": "ok", "message": "Showing minimized applications manager"}
+
         return {"version": 1, "status": "error", "message": f"Unknown action: {action}"}
 
     def parse_duration(self, s: str) -> int:

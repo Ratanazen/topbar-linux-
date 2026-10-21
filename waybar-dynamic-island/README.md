@@ -307,24 +307,29 @@ island-ctl share launch <app_id> <files...>
 ## 11. macOS-Inspired Window Minimization & Island Integration
 
 Seamless Sway / SwayFX window management via native Sway IPC:
-- **Mac-Style Scale Minimize Animation**:
-  - `WindowMinimizeAnimator.qml`: Dedicated non-blocking layer-shell overlay on `WlrLayer.Overlay`.
-  - Captures the exact window screen geometry (`x`, `y`, `width`, `height`) before it moves to Sway scratchpad.
-  - Smooth `ParallelAnimation` scales and translates the window card directly into the top-center Dynamic Island capsule.
-  - Reverse animation on restore expands the card back to its original screen geometry.
-  - `mask: Region { item: animCard.opacity > 0.05 ? animCard : null }` ensures zero desktop input blocking outside the transient animating preview card.
-- **Dynamic Island Representation**:
-  - **Compact Island**: Minimized applications are represented by interactive circular icon pills (e.g. `󰄛 󰈰`) next to the time display. Clicking any icon instantly restores and focuses the window.
-  - **Expanded Island**: Dedicated "Minimized Windows" management card with app icon, window title, and one-click "Restore" button.
-- **Sway Scratchpad IPC**:
-  - Native minimize: `swaymsg [con_id=...] move scratchpad`
-  - Native restore: `swaymsg [con_id=...] scratchpad show; [con_id=...] focus`
-  - Zero process killing or artificial window destruction.
-  - In-memory event-driven Sway IPC cache eliminating repeated high-frequency tree parsing.
+- **6 Mac-Inspired Animation Styles (`WindowMinimizeAnimator.qml`)**:
+  - `genie` (macOS Genie): Squeezes window width faster while moving vertically along an asymmetric curve into the capsule mouth.
+  - `scale`: Uniform smooth proportional shrink into the Dynamic Island capsule or dock.
+  - `scale-fade`: Accelerated opacity drop during geometric contraction.
+  - `spring`: Elastic spring bounce with customizable overshoot (`Easing.OutBack`).
+  - `reduced-motion`: 80ms gentle cross-fade without spatial movement.
+  - `none`: Instantaneous 0ms state transition.
+  - Non-blocking input mask: `mask: Region { item: animCard.opacity > 0.05 ? animCard : null }` ensures zero desktop click blocking outside the animating preview card.
+- **Dedicated Minimized Application Manager (`MinimizedAppsView.qml`)**:
+  - **Compact Island Mode**: Interactive icon pills (e.g. `󰄛 󰈰`) embedded directly in the capsule beside the clock.
+  - **Expanded Manager Card**: Complete manager interface displaying application icon, window name, subtitle (`app_id • scratchpad`), and `Restore` action button.
+  - **Multi-Window Support**: Groups and tracks multiple concurrent windows of the same application.
+  - **Full Keyboard Navigation**: `↑` / `↓` cursor selection, `Enter` / `Return` to restore, and `Esc` to dismiss.
+- **Dual Animation Targets**:
+  - `island`: animates toward the top-center Dynamic Island capsule.
+  - `dock`: animates toward the bottom floating dock.
+- **Configurable Placement & Fallback**:
+  - Capsule position: `top-center`, `top-left`, `top-right`.
+  - Crisp opaque glass fallback when compositor blur is disabled or unsupported.
 
 ### Window Management CLI Commands
 ```bash
-# List active and minimized scratchpad windows
+# List active and scratchpad windows
 island-ctl windows list
 
 # Minimize window by ID (or focused window)
@@ -332,6 +337,18 @@ island-ctl windows min [con_id]
 
 # Restore minimized window by ID
 island-ctl windows restore <con_id>
+
+# Configure animation style (genie, scale, scale-fade, spring, reduced-motion, none)
+island-ctl windows style <style_name>
+
+# Configure animation target (island, dock)
+island-ctl windows target <island|dock>
+
+# Open Minimized Applications Manager in Dynamic Island
+island-ctl windows manager
+
+# Set capsule position (top-center, top-left, top-right)
+island-ctl position <position>
 ```
 
 ---
@@ -348,9 +365,9 @@ Engineered for ultra-low resource consumption on lightweight or older hardware:
 
 ### Performance Profiles
 Switch profiles on the fly with instant daemon reconfiguration:
-- `low-resource`: 30s idle clock, 6s metrics polling, reduced motion enabled, 180ms fade animations.
-- `balanced` (default): 15s idle clock, 3s metrics polling, 380ms smooth scale animations.
-- `visual-quality`: 5s idle clock, 2s metrics polling, 420ms full scale genie-style animations.
+- `low-resource`: 30s idle clock, 6s metrics polling, reduced motion enabled, blur disabled, 180ms fade animations.
+- `balanced` (default): 15s idle clock, 3s metrics polling, 380ms smooth scale animations, blur enabled.
+- `visual-quality`: 5s idle clock, 2s metrics polling, 420ms full scale genie-style animations, blur enabled.
 
 ```bash
 # View active profile and timing parameters
@@ -362,9 +379,16 @@ island-ctl profile set <low-resource|balanced|visual-quality>
 
 ---
 
-## 13. Automated Test Suite
+## 13. Unified 17-State Machine
 
-Run the full automated test suite (62 tests) verifying all 14 states, priority arbitration, Bluetooth OBEX, Smart Share URL sanitization, Unicode/Khmer filenames, zero-`shell=True` security, Sway window minimization, performance profile switching, and Waybar JSON single-line emission:
+Conforming to Section 11, the core implements a validated finite state machine:
+`idle`, `compact`, `expanded`, `minimize_detected`, `minimize_animating`, `minimized_apps`, `restore_detected`, `restore_animating`, `drag_enter`, `drag_active`, `share_picker`, `share_confirm`, `share_launching`, `share_error`, `media_expanded`, `quick_settings`, `notification`.
+
+---
+
+## 14. Automated Test Suite
+
+Run the full automated test suite (65 tests) verifying all 17 states, transition rules, animation style normalizers, Bluetooth OBEX, Smart Share URL sanitization, Unicode/Khmer filenames, zero-`shell=True` security, Sway window minimization, performance profile switching, and Waybar JSON single-line emission:
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py"
@@ -372,7 +396,7 @@ python3 -m unittest discover -s tests -p "test_*.py"
 
 Result:
 ```text
-Ran 62 tests in 0.803s
+Ran 65 tests in 0.850s
 OK
 ```
 

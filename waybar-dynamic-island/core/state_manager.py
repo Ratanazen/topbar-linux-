@@ -211,6 +211,10 @@ class IslandState:
     share_targets: List[Dict[str, Any]] = field(default_factory=list)
     running_windows: List[Dict[str, Any]] = field(default_factory=list)
 
+    # State Machine & Animation tracking
+    previous_state: Optional[str] = None
+    anim_key: str = ""
+
     @property
     def is_expired(self) -> bool:
         if self.duration is None:
@@ -270,6 +274,11 @@ class IslandState:
             "reduced_motion": getattr(config, "reduced_motion", False),
             "frontend": getattr(config, "frontend", "waybar"),
             "show_full": getattr(config, "show_full", False),
+            "capsule_position": getattr(config, "position", "top-center"),
+            "blur_enabled": getattr(config, "blur_enabled", True),
+            "minimize_style": getattr(config, "minimize_style", "scale"),
+            "minimize_target": getattr(config, "minimize_target", "island"),
+            "minimized_apps_visibility": getattr(config, "minimized_apps_visibility", "auto"),
             "art_url": getattr(self, "art_url", ""),
             "duration_str": getattr(self, "duration_str", ""),
             "position_str": getattr(self, "position_str", ""),
@@ -281,6 +290,8 @@ class IslandState:
             "dropped_files": getattr(self, "dropped_files", []),
             "share_targets": getattr(self, "share_targets", []),
             "running_windows": getattr(self, "running_windows", []),
+            "previous_state": getattr(self, "previous_state", None),
+            "anim_key": getattr(self, "anim_key", ""),
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -311,4 +322,6 @@ class IslandState:
             "dropped_files": self.dropped_files,
             "share_targets": self.share_targets,
             "running_windows": self.running_windows,
+            "previous_state": self.previous_state,
+            "animation_token": self.animation_token,
         }

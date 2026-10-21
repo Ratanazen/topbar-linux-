@@ -56,89 +56,9 @@ Column {
     }
 
     // Minimized Applications Section (if any exist)
-    Column {
-        width: parent.width
-        spacing: 4
+    MinimizedAppsView {
+        id: minAppsManager
         visible: IslandBridge.minimizedWindows && IslandBridge.minimizedWindows.length > 0
-
-        Text {
-            text: "MINIMIZED WINDOWS (" + (IslandBridge.minimizedWindows ? IslandBridge.minimizedWindows.length : 0) + ")"
-            color: Theme.textSecondary
-            font.pixelSize: 9
-            font.bold: true
-        }
-
-        Repeater {
-            model: IslandBridge.minimizedWindows ? Math.min(3, IslandBridge.minimizedWindows.length) : 0
-            delegate: Rectangle {
-                id: minRow
-                required property int index
-                property var win: IslandBridge.minimizedWindows[index]
-
-                width: parent.width
-                height: 26
-                radius: 6
-                color: rowHov.hovered ? Qt.rgba(1, 1, 1, 0.14) : Qt.rgba(1, 1, 1, 0.06)
-                border.color: rowHov.hovered ? Theme.accent : Qt.rgba(1, 1, 1, 0.1)
-                border.width: 1
-
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: 4
-
-                    Row {
-                        anchors.left: parent.left
-                        anchors.right: restoreBtn.left
-                        anchors.rightMargin: 6
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: (minRow.win && minRow.win.icon) ? minRow.win.icon : "󰖲"
-                            color: Theme.accentYellow
-                            font.pixelSize: 12
-                        }
-
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: (minRow.win && (minRow.win.title || minRow.win.name || minRow.win.app_id)) ? (minRow.win.title || minRow.win.name || minRow.win.app_id) : "Window"
-                            color: Theme.textPrimary
-                            font.pixelSize: 11
-                            elide: Text.ElideRight
-                            width: minRow.width - 90
-                        }
-                    }
-
-                    Rectangle {
-                        id: restoreBtn
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 50
-                        height: 18
-                        radius: 4
-                        color: Theme.accent
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Restore"
-                            color: "#ffffff"
-                            font.pixelSize: 9
-                            font.bold: true
-                        }
-                    }
-                }
-
-                HoverHandler { id: rowHov }
-                TapHandler {
-                    onTapped: {
-                        if (minRow.win && minRow.win.id) {
-                            IslandBridge.restoreWindow(minRow.win.id);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // Quick Action Bar
