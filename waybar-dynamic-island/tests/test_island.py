@@ -1285,6 +1285,36 @@ class TestMacOSWindowMinimizeAndRestore(unittest.TestCase):
         loaded = json.loads(serialized)
         self.assertEqual(loaded["text"], data["text"])
 
+    def test_multiple_windows_per_application(self):
+        win1 = {"id": 10, "app_id": "firefox", "name": "Firefox - Window 1", "minimized": True, "icon": "󰈹", "rect": {"x": 0, "y": 0, "width": 800, "height": 600}}
+        win2 = {"id": 11, "app_id": "firefox", "name": "Firefox - Window 2", "minimized": True, "icon": "󰈹", "rect": {"x": 200, "y": 100, "width": 800, "height": 600}}
+        with patch.object(self.daemon.window_monitor, "get_minimized_windows", return_value=[win1, win2]):
+            self.daemon._on_window_state_changed()
+            self.assertEqual(self.daemon.selected_minimized_index, 0)
+
+            loop = asyncio.new_event_loop()
+            try:
+                res = loop.run_until_complete(self.daemon.dispatch_action("windows", ["next"], None))
+                self.assertEqual(res["selected_index"], 1)
+                selected = self.daemon.window_monitor.get_minimized_windows()[res["selected_index"]]
+                self.assertEqual(selected["id"], 11)
+                self.assertEqual(selected["name"], "Firefox - Window 2")
+            finally:
+                loop.close()
+
+    def test_interrupted_rapid_clicks_handling(self):
+        con_id = 909
+        self.monitor._cached_windows = [{
+            "id": con_id, "app_id": "kitty", "name": "Terminal", "focused": True, "minimized": False, "rect": {"x": 10, "y": 10, "width": 400, "height": 300}
+        }]
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            for _ in range(5):
+                res_min = self.monitor.minimize_window(con_id, allow_thumbnail=False)
+                res_res = self.monitor.restore_window(con_id)
+                self.assertEqual(res_min["status"], "ok")
+                self.assertEqual(res_res["status"], "ok")
+
 
 class TestWifiAndBluetoothManagers(unittest.TestCase):
     def setUp(self):
