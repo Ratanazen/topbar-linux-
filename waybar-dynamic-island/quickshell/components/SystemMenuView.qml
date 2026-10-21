@@ -21,6 +21,8 @@ Rectangle {
 
         // About This PC
         MenuItem {
+            iconGlyph: ""
+            iconColor: "#ffffff"
             label: "About This PC"
             shortcut: ""
             onTriggered: {
@@ -31,6 +33,8 @@ Rectangle {
 
         // System Settings
         MenuItem {
+            iconGlyph: "󰒓"
+            iconColor: "#0a84ff"
             label: "System Settings..."
             shortcut: "⌘,"
             onTriggered: {
@@ -41,6 +45,8 @@ Rectangle {
 
         // App Store
         MenuItem {
+            iconGlyph: "󰀻"
+            iconColor: "#007AFF"
             label: "App Store..."
             shortcut: ""
             onTriggered: {
@@ -53,6 +59,8 @@ Rectangle {
 
         // Force Quit
         MenuItem {
+            iconGlyph: "󰅖"
+            iconColor: "#ff453a"
             label: "Force Quit..."
             shortcut: "⌥⌘⎋"
             onTriggered: {
@@ -65,6 +73,8 @@ Rectangle {
 
         // Sleep
         MenuItem {
+            iconGlyph: "󰒲"
+            iconColor: "#ffd60a"
             label: "Sleep"
             shortcut: ""
             onTriggered: {
@@ -75,6 +85,8 @@ Rectangle {
 
         // Restart
         MenuItem {
+            iconGlyph: "󰑓"
+            iconColor: "#ff9f0a"
             label: "Restart..."
             shortcut: ""
             onTriggered: {
@@ -85,6 +97,8 @@ Rectangle {
 
         // Shut Down
         MenuItem {
+            iconGlyph: "󰐥"
+            iconColor: "#ff453a"
             label: "Shut Down..."
             shortcut: ""
             onTriggered: {
@@ -97,6 +111,8 @@ Rectangle {
 
         // Lock Screen
         MenuItem {
+            iconGlyph: "󰌾"
+            iconColor: "#ffd60a"
             label: "Lock Screen"
             shortcut: "⌃⌘Q"
             onTriggered: {
@@ -107,6 +123,8 @@ Rectangle {
 
         // Log Out
         MenuItem {
+            iconGlyph: "󰍃"
+            iconColor: "#a1a1a6"
             label: "Log Out..."
             shortcut: "⇧⌘Q"
             onTriggered: {
@@ -117,6 +135,8 @@ Rectangle {
     }
 
     component MenuItem: Rectangle {
+        property string iconGlyph: ""
+        property color iconColor: Theme.textSecondary
         property string label: ""
         property string shortcut: ""
         signal triggered()
@@ -131,12 +151,26 @@ Rectangle {
             anchors.leftMargin: 8
             anchors.rightMargin: 8
 
-            Text {
-                text: label
-                color: itemHover.hovered ? "#ffffff" : Theme.textPrimary
-                font.pixelSize: 11
+            Row {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                Text {
+                    text: iconGlyph
+                    color: itemHover.hovered ? "#ffffff" : iconColor
+                    font.pixelSize: 12
+                    width: 14
+                    horizontalAlignment: Text.AlignHCenter
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: label
+                    color: itemHover.hovered ? "#ffffff" : Theme.textPrimary
+                    font.pixelSize: 11
+                    anchors.verticalCenter: parent.verticalCenter
+                }
             }
 
             Text {

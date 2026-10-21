@@ -7,7 +7,7 @@ Rectangle {
 
     // Configurable Screen Placement
     anchors.top: parent.top
-    anchors.topMargin: 3
+    anchors.topMargin: IslandBridge.topBarEnabled ? 2 : 3
     anchors.horizontalCenter: (IslandBridge.capsulePosition === "top-center" || !IslandBridge.capsulePosition) ? parent.horizontalCenter : undefined
     anchors.left: IslandBridge.capsulePosition === "top-left" ? parent.left : undefined
     anchors.leftMargin: IslandBridge.capsulePosition === "top-left" ? 24 : 0
@@ -15,6 +15,10 @@ Rectangle {
     anchors.rightMargin: IslandBridge.capsulePosition === "top-right" ? 24 : 0
     focus: true
     clip: true
+
+    onWidthChanged: {
+        IslandBridge.capsuleWidth = width;
+    }
 
     // Morphological Target Dimensions
     readonly property real targetWidth: {
@@ -97,7 +101,7 @@ Rectangle {
             case "restoring":
             case "idle":
             default:
-                return 38;
+                return IslandBridge.topBarEnabled ? 26 : 38;
         }
     }
 
@@ -116,7 +120,7 @@ Rectangle {
             case "quickActions":
             case "quick_settings": return 22;
             case "notification": return 20;
-            default: return 19;
+            default: return IslandBridge.topBarEnabled ? 13 : 19;
         }
     }
 

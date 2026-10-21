@@ -757,10 +757,14 @@ def main():
             print(f"Active frontend: {res.get('frontend', 'waybar')}")
         elif sub == "set":
             if len(sys.argv) < 4:
-                sys.stderr.write("Usage: island-ctl frontend set <waybar|quickshell|both>\n")
+                sys.stderr.write("Usage: island-ctl frontend set <waybar|quickshell|hybrid|both>\n")
                 sys.exit(1)
             target = sys.argv[3].lower()
-            if target in ("quickshell", "both") and not shutil.which("quickshell"):
+            if target == "waybar-lite":
+                target = "waybar"
+            elif target == "quickshell-pro":
+                target = "quickshell"
+            if target in ("quickshell", "both", "hybrid") and not shutil.which("quickshell"):
                 sys.stderr.write("Error: 'quickshell' is not found in PATH.\nInstall Quickshell or run install.sh.\n")
                 sys.exit(1)
             res = send_ipc("frontend_set", {"frontend": target})
@@ -768,13 +772,30 @@ def main():
                 sys.stderr.write(f"Error: {res.get('message')}\n")
                 sys.exit(1)
             print(res.get("message"))
-            subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
-            if target in ("quickshell", "both"):
+            if target == "waybar":
+                res_wb = subprocess.run(["pgrep", "waybar"], capture_output=True)
+                if res_wb.returncode != 0 and shutil.which("waybar"):
+                    wb_cfg = Path.home() / ".config" / "waybar" / "config.jsonc"
+                    wb_css = Path.home() / ".config" / "waybar" / "style.css"
+                    cmd = ["waybar"]
+                    if wb_cfg.exists():
+                        cmd.extend(["-c", str(wb_cfg)])
+                    if wb_css.exists():
+                        cmd.extend(["-s", str(wb_css)])
+                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                    print("Waybar Lite started.")
+                else:
+                    subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+                send_ipc("topbar_ui", {"target": "hide_bar"})
+            elif target == "quickshell":
+                subprocess.run(["pkill", "waybar"], capture_output=True)
+                send_ipc("topbar_ui", {"target": "show_bar"})
                 res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
                 if res_qs.returncode != 0:
                     print("Quickshell is not running. Launch it with: island-ctl frontend start quickshell")
-            elif target == "waybar":
-                subprocess.run(["pkill", "-f", "quickshell.*ratana-island"], capture_output=True)
+            elif target in ("hybrid", "both"):
+                subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
+                send_ipc("topbar_ui", {"target": "show_bar"})
         elif sub == "start":
             target = sys.argv[3].lower() if len(sys.argv) > 3 else "quickshell"
             if target == "quickshell":

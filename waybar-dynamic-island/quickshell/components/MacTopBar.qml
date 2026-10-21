@@ -175,7 +175,7 @@ PanelWindow {
             Item {
                 id: centerSpacer
                 anchors.centerIn: parent
-                width: IslandBridge.notchEnabled ? IslandBridge.notchWidth : 200
+                width: Math.max(IslandBridge.notchEnabled ? IslandBridge.notchWidth : 160, IslandBridge.capsuleWidth + 24)
                 height: parent.height
             }
 
@@ -186,23 +186,31 @@ PanelWindow {
                 id: rightSection
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
+                spacing: 8
 
                 // 1. Keyboard Layout Indicator
                 Rectangle {
-                    width: lanLabel.implicitWidth + 10
+                    width: lanRow.implicitWidth + 8
                     height: 20
                     radius: 4
                     color: lanHover.hovered ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
                     anchors.verticalCenter: parent.verticalCenter
 
-                    Text {
-                        id: lanLabel
+                    Row {
+                        id: lanRow
                         anchors.centerIn: parent
-                        text: (IslandBridge.title && IslandBridge.title.indexOf("KH") !== -1) ? "KH" : "US"
-                        color: Theme.textPrimary
-                        font.pixelSize: 11
-                        font.bold: true
+                        spacing: 3
+                        Text {
+                            text: "󰌌"
+                            color: Theme.textSecondary
+                            font.pixelSize: 11
+                        }
+                        Text {
+                            text: (IslandBridge.title && IslandBridge.title.indexOf("KH") !== -1) ? "KH" : "US"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
                     }
                     HoverHandler { id: lanHover }
                     TapHandler {
@@ -210,27 +218,58 @@ PanelWindow {
                     }
                 }
 
-                // 2. Active Microphone Indicator (Visible ONLY when actively streaming)
+                // 2. Privacy Streaming Indicator (Active Microphone / Recording)
                 Rectangle {
-                    width: 20
+                    width: micRow.implicitWidth + 8
                     height: 20
                     radius: 10
                     color: Qt.rgba(1.0, 0.60, 0.0, 0.20)
                     visible: IslandBridge.micActive
                     anchors.verticalCenter: parent.verticalCenter
 
-                    Text {
+                    Row {
+                        id: micRow
                         anchors.centerIn: parent
-                        text: "󰍬"
-                        color: Theme.accentOrange
-                        font.pixelSize: 12
+                        spacing: 3
+                        Text {
+                            text: "●"
+                            color: "#ff9f0a"
+                            font.pixelSize: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "󰍬"
+                            color: "#ff9f0a"
+                            font.pixelSize: 11
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
                     TapHandler {
                         onTapped: IslandBridge.toggleAudioPopover()
                     }
                 }
 
-                // 3. Wi-Fi Status Icon & Popover Toggle
+                // 3. Screen Mirroring / AirPlay
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 4
+                    color: airplayHover.hovered ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "󰕟"
+                        color: airplayHover.hovered ? "#007AFF" : Theme.textPrimary
+                        font.pixelSize: 13
+                    }
+                    HoverHandler { id: airplayHover }
+                    TapHandler {
+                        onTapped: IslandBridge.sendCommand("event", ["--title", "Screen Mirroring", "--message", "AirPlay / Wayland Display Ready", "--duration", "3"])
+                    }
+                }
+
+                // 4. Wi-Fi Status Icon & Popover Toggle
                 Rectangle {
                     width: 22
                     height: 22
@@ -241,7 +280,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: IslandBridge.wifiStatus ? (IslandBridge.wifiStatus.icon || "󰤨") : "󰤨"
-                        color: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected) ? Theme.textPrimary : Theme.textSecondary
+                        color: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected) ? "#007AFF" : Theme.textSecondary
                         font.pixelSize: 13
                     }
                     HoverHandler { id: wifiBtnHover }
@@ -253,7 +292,7 @@ PanelWindow {
                     }
                 }
 
-                // 4. Bluetooth Status Icon & Popover Toggle
+                // 5. Bluetooth Status Icon & Popover Toggle
                 Rectangle {
                     width: 22
                     height: 22
@@ -264,7 +303,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "󰂯"
-                        color: IslandBridge.bluetoothPowered ? Theme.textPrimary : Theme.textSecondary
+                        color: IslandBridge.bluetoothPowered ? "#007AFF" : Theme.textSecondary
                         font.pixelSize: 13
                     }
                     HoverHandler { id: btBtnHover }
@@ -276,7 +315,7 @@ PanelWindow {
                     }
                 }
 
-                // 5. Volume / Sound Icon & Output Selector Toggle
+                // 6. Volume / Sound Icon & Output Selector Toggle
                 Rectangle {
                     width: 22
                     height: 22
@@ -286,8 +325,8 @@ PanelWindow {
 
                     Text {
                         anchors.centerIn: parent
-                        text: IslandBridge.icon || "󰕾"
-                        color: IslandBridge.title === "Muted" ? Theme.accentRed : Theme.textPrimary
+                        text: IslandBridge.title === "Muted" ? "󰝟" : (IslandBridge.icon || "󰕾")
+                        color: IslandBridge.title === "Muted" ? "#ff453a" : Theme.textPrimary
                         font.pixelSize: 13
                     }
                     HoverHandler { id: volBtnHover }
@@ -299,13 +338,23 @@ PanelWindow {
                     }
                 }
 
-                // 6. Battery Status (Icon + Percentage)
+                // 7. Battery Status (Color-coded Icon + Percentage)
                 Rectangle {
+                    id: battContainer
                     width: battRow.implicitWidth + 8
                     height: 20
                     radius: 4
                     color: (battBtnHover.hovered || IslandBridge.batteryPopoverOpen) ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
                     anchors.verticalCenter: parent.verticalCenter
+
+                    readonly property int battLevel: IslandBridge.deviceBattery !== null ? IslandBridge.deviceBattery : 100
+                    readonly property bool isCharging: IslandBridge.deviceCharging || (IslandBridge.deviceBattery === null)
+                    readonly property color battColor: {
+                        if (isCharging) return "#30d158";
+                        if (battLevel <= 20) return "#ff453a";
+                        if (battLevel <= 50) return "#ffd60a";
+                        return "#30d158";
+                    }
 
                     Row {
                         id: battRow
@@ -313,8 +362,8 @@ PanelWindow {
                         spacing: 4
 
                         Text {
-                            text: IslandBridge.deviceBattery !== null ? "󰁹" : "󰚥"
-                            color: Theme.textPrimary
+                            text: battContainer.isCharging ? "󰂄" : (battContainer.battLevel <= 20 ? "󰂃" : (battContainer.battLevel <= 50 ? "󰁽" : "󰁹"))
+                            color: battContainer.battColor
                             font.pixelSize: 13
                             anchors.verticalCenter: parent.verticalCenter
                         }
@@ -335,7 +384,7 @@ PanelWindow {
                     }
                 }
 
-                // 7. Notification Bell / Do Not Disturb Toggle
+                // 8. Notification Bell / Do Not Disturb Toggle
                 Rectangle {
                     width: 22
                     height: 22
@@ -345,8 +394,8 @@ PanelWindow {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "󰂚"
-                        color: Theme.textPrimary
+                        text: IslandBridge.dndEnabled ? "󰂛" : "󰂚"
+                        color: IslandBridge.dndEnabled ? "#AF52DE" : Theme.textPrimary
                         font.pixelSize: 13
                     }
                     HoverHandler { id: dndBtnHover }
@@ -355,7 +404,47 @@ PanelWindow {
                     }
                 }
 
-                // 8. Control Center Toggle Button
+                // 9. Spotlight Search Button (Launches fuzzel)
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 4
+                    color: spotHover.hovered ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "󰍉"
+                        color: spotHover.hovered ? "#007AFF" : Theme.textPrimary
+                        font.pixelSize: 13
+                    }
+                    HoverHandler { id: spotHover }
+                    TapHandler {
+                        onTapped: IslandBridge.launchApp("fuzzel")
+                    }
+                }
+
+                // 10. Siri / Apple Intelligence Button
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: siriHover.hovered ? Qt.rgba(0.75, 0.35, 0.95, 0.25) : "transparent"
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "󰚩"
+                        color: "#bf5af2"
+                        font.pixelSize: 13
+                    }
+                    HoverHandler { id: siriHover }
+                    TapHandler {
+                        onTapped: IslandBridge.launchApp("fuzzel")
+                    }
+                }
+
+                // 11. Control Center Toggle Button
                 Rectangle {
                     width: 22
                     height: 22
@@ -366,7 +455,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "󰘳"
-                        color: Theme.textPrimary
+                        color: (ccBtnHover.hovered || IslandBridge.controlCenterOpen) ? "#007AFF" : Theme.textPrimary
                         font.pixelSize: 13
                     }
                     HoverHandler { id: ccBtnHover }
@@ -378,7 +467,7 @@ PanelWindow {
                     }
                 }
 
-                // 9. Clock & Date
+                // 12. Clock & Date
                 Rectangle {
                     id: clockBtn
                     width: clockLabel.implicitWidth + 8
@@ -624,7 +713,7 @@ PanelWindow {
         anchors.right: parent.right
         anchors.rightMargin: 8
         width: 320
-        height: 290
+        height: 350
         radius: 14
         color: Theme.background
         border.color: Theme.border

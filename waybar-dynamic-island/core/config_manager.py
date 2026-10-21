@@ -26,19 +26,28 @@ MODES = ["waybar-lite", "waybar-enhanced", "quickshell", "hybrid"]
 THEME_PRESETS = [
     "macos-black",
     "macos-glass",
+    "macos-tahoe-glass",
+    "macos-dark-glass",
+    "macos-light",
     "hyperos-dark",
     "originos-dark",
     "catppuccin-mocha",
     "minimal-dark",
+    "low-resource",
 ]
 
 THEME_ALIASES: Dict[str, str] = {
     "glass": "macos-glass",
+    "tahoe": "macos-tahoe-glass",
+    "macos-tahoe": "macos-tahoe-glass",
+    "macos-dark": "macos-dark-glass",
+    "light": "macos-light",
     "minimal": "minimal-dark",
     "hyperos": "hyperos-dark",
     "originos": "originos-dark",
     "mocha": "catppuccin-mocha",
     "catppuccin": "catppuccin-mocha",
+    "lowpower": "low-resource",
 }
 
 

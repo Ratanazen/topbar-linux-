@@ -87,6 +87,7 @@ QtObject {
     property int topBarHeight: 30
     property bool notchEnabled: false
     property int notchWidth: 160
+    property real capsuleWidth: 180
     property bool micActive: false
     property var audioSinks: []
 
@@ -189,6 +190,9 @@ QtObject {
                         else if (msg.ui_action === "wifi") root.toggleWifiView();
                         else if (msg.ui_action === "bluetooth") root.toggleBluetoothView();
                         else if (msg.ui_action === "dismiss") root.dismiss();
+                        else if (msg.ui_action === "hide_bar") root.topBarEnabled = false;
+                        else if (msg.ui_action === "show_bar") root.topBarEnabled = true;
+                        else if (msg.ui_action === "toggle_bar") root.topBarEnabled = !root.topBarEnabled;
                     }
                     if (msg.state !== undefined) {
                         var nextState = msg.state || "idle";

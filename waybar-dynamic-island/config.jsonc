@@ -13,7 +13,8 @@
 
   "modules-left": [
     "group/left1",
-    "group/left2"
+    "group/left2",
+    "sway/window"
   ],
   "modules-center": [
     "custom/island"
@@ -48,10 +49,10 @@
   },
 
   "custom/omarchy": {
-    "format": "",
+    "format": "",
     "on-click": "fuzzel",
     "on-click-right": "nwg-drawer",
-    "tooltip-format": "Applications Menu\n\nLeft-click: Fuzzel\nRight-click: Drawer"
+    "tooltip-format": "Apple System Menu\n\nLeft-click: Fuzzel\nRight-click: Drawer"
   },
 
   "idle_inhibitor": {

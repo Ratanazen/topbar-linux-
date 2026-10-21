@@ -13,7 +13,7 @@ Column {
     // -------------------------------------------------------------
     Item {
         width: parent.width
-        height: 20
+        height: 22
 
         Row {
             anchors.left: parent.left
@@ -22,13 +22,13 @@ Column {
 
             Text {
                 text: "󰘳"
-                color: Theme.accent
-                font.pixelSize: 13
+                color: "#0a84ff"
+                font.pixelSize: 14
             }
             Text {
                 text: "Control Center"
-                color: Theme.textSecondary
-                font.pixelSize: 11
+                color: Theme.textPrimary
+                font.pixelSize: 12
                 font.bold: true
             }
         }
@@ -36,9 +36,9 @@ Column {
         Rectangle {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: 20
-            height: 20
-            radius: 10
+            width: 22
+            height: 22
+            radius: 11
             color: closeHover.hovered ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(1, 1, 1, 0.08)
 
             Text {
@@ -54,370 +54,618 @@ Column {
     }
 
     // -------------------------------------------------------------
-    // HyperOS Section 1: Dual Connectivity Tiles (Wi-Fi & Bluetooth)
+    // macOS Section 1: 2-Column Grid (Connectivity & Focus / Dock)
     // -------------------------------------------------------------
     Row {
         width: parent.width
         spacing: 8
 
-        // Wi-Fi Tile
+        // Left Column: Connectivity Big Card (Wi-Fi, Bluetooth, AirDrop)
         Rectangle {
             width: (parent.width - 8) / 2
-            height: 48
-            radius: 12
-            color: wifiHover.hovered ? Qt.rgba(1, 1, 1, 0.12) : Theme.cardBackground
-            border.color: Qt.rgba(1, 1, 1, 0.08)
+            height: 126
+            radius: 14
+            color: Theme.cardBackground
+            border.color: Theme.border
             border.width: 1
 
-            Row {
+            Column {
                 anchors.fill: parent
                 anchors.margins: 8
-                spacing: 8
+                spacing: 6
 
-                Rectangle {
-                    width: 32
+                // 1. Wi-Fi Row
+                Item {
+                    width: parent.width
                     height: 32
-                    radius: 16
-                    color: Qt.rgba(0, 0.82, 0.78, 0.18)
-                    anchors.verticalCenter: parent.verticalCenter
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰤨"
-                        color: Theme.accent
-                        font.pixelSize: 15
+                    Rectangle {
+                        id: wifiCircle
+                        width: 28
+                        height: 28
+                        radius: 14
+                        color: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected) ? "#007AFF" : Qt.rgba(1, 1, 1, 0.12)
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰤨"
+                            color: "#ffffff"
+                            font.pixelSize: 14
+                        }
                     }
+
+                    Column {
+                        anchors.left: wifiCircle.right
+                        anchors.leftMargin: 8
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            text: "Wi-Fi"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Text {
+                            text: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected)
+                                  ? (IslandBridge.wifiStatus.ssid || "Connected")
+                                  : "Disconnected"
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                            elide: Text.ElideRight
+                            width: parent.width - 6
+                        }
+                    }
+
+                    HoverHandler { id: wfHover }
+                    TapHandler { onTapped: IslandBridge.openWifi() }
                 }
 
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
+                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
 
-                    Text {
-                        text: "Wi-Fi"
-                        color: Theme.textPrimary
-                        font.pixelSize: 11
-                        font.bold: true
+                // 2. Bluetooth Row
+                Item {
+                    width: parent.width
+                    height: 32
+
+                    Rectangle {
+                        id: btCircle
+                        width: 28
+                        height: 28
+                        radius: 14
+                        color: IslandBridge.bluetoothPowered ? "#007AFF" : Qt.rgba(1, 1, 1, 0.12)
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰂯"
+                            color: "#ffffff"
+                            font.pixelSize: 14
+                        }
                     }
-                    Text {
-                        text: (IslandBridge.wifiStatus && IslandBridge.wifiStatus.connected)
-                              ? (IslandBridge.wifiStatus.ssid || "Connected")
-                              : "Disconnected"
-                        color: Theme.textSecondary
-                        font.pixelSize: 9
-                        elide: Text.ElideRight
-                        width: parent.parent.width - 48
+
+                    Column {
+                        anchors.left: btCircle.right
+                        anchors.leftMargin: 8
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            text: "Bluetooth"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Text {
+                            text: (IslandBridge.bluetoothDevices && IslandBridge.bluetoothDevices.length > 0 && IslandBridge.bluetoothDevices[0].connected)
+                                  ? (IslandBridge.bluetoothDevices[0].name || "Connected")
+                                  : (IslandBridge.bluetoothPowered ? "Ready" : "Off")
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                            elide: Text.ElideRight
+                            width: parent.width - 6
+                        }
                     }
+
+                    HoverHandler { id: bthHover }
+                    TapHandler { onTapped: IslandBridge.openBluetooth() }
                 }
-            }
 
-            HoverHandler { id: wifiHover }
-            TapHandler {
-                onTapped: {
-                    IslandBridge.openWifi();
+                Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.06) }
+
+                // 3. AirDrop / Smart Share Row
+                Item {
+                    width: parent.width
+                    height: 30
+
+                    Rectangle {
+                        id: adCircle
+                        width: 28
+                        height: 28
+                        radius: 14
+                        color: "#007AFF"
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󱎰"
+                            color: "#ffffff"
+                            font.pixelSize: 14
+                        }
+                    }
+
+                    Column {
+                        anchors.left: adCircle.right
+                        anchors.leftMargin: 8
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+
+                        Text {
+                            text: "AirDrop"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Text {
+                            text: "Contacts Only"
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                            elide: Text.ElideRight
+                            width: parent.width - 6
+                        }
+                    }
+
+                    HoverHandler { id: adHover }
+                    TapHandler {
+                        onTapped: IslandBridge.sendCommand("event", ["--title", "AirDrop", "--message", "AirDrop Ready • Share Active", "--duration", "3"])
+                    }
                 }
             }
         }
 
-        // Bluetooth Tile
-        Rectangle {
+        // Right Column: Stacked Focus & Dock Cards
+        Column {
             width: (parent.width - 8) / 2
-            height: 48
-            radius: 12
-            color: btHover.hovered ? Qt.rgba(1, 1, 1, 0.12) : Theme.cardBackground
-            border.color: Qt.rgba(1, 1, 1, 0.08)
-            border.width: 1
+            spacing: 8
 
-            Row {
-                anchors.fill: parent
-                anchors.margins: 8
-                spacing: 8
+            // Focus / Do Not Disturb Tile
+            Rectangle {
+                width: parent.width
+                height: 59
+                radius: 14
+                color: Theme.cardBackground
+                border.color: Theme.border
+                border.width: 1
 
-                Rectangle {
-                    width: 32
-                    height: 32
-                    radius: 16
-                    color: Qt.rgba(0.04, 0.52, 1.0, 0.18)
-                    anchors.verticalCenter: parent.verticalCenter
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 10
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰂯"
-                        color: Theme.accentCyan
-                        font.pixelSize: 15
+                    Rectangle {
+                        width: 34
+                        height: 34
+                        radius: 17
+                        color: "#AF52DE"
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰂛"
+                            color: "#ffffff"
+                            font.pixelSize: 17
+                        }
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            text: "Focus"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Text {
+                            text: "Do Not Disturb"
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                        }
                     }
                 }
 
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 1
+                HoverHandler { id: focusHover }
+                TapHandler { onTapped: IslandBridge.dndToggle() }
+            }
 
-                    Text {
-                        text: "Bluetooth"
-                        color: Theme.textPrimary
-                        font.pixelSize: 11
-                        font.bold: true
+            // Stage Manager / Dock Tile
+            Rectangle {
+                width: parent.width
+                height: 59
+                radius: 14
+                color: Theme.cardBackground
+                border.color: Theme.border
+                border.width: 1
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 10
+
+                    Rectangle {
+                        width: 34
+                        height: 34
+                        radius: 17
+                        color: IslandBridge.dockEnabled ? "#30B0C7" : Qt.rgba(1, 1, 1, 0.12)
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰀻"
+                            color: "#ffffff"
+                            font.pixelSize: 17
+                        }
                     }
-                    Text {
-                        text: (IslandBridge.bluetoothDevices && IslandBridge.bluetoothDevices.length > 0 && IslandBridge.bluetoothDevices[0].connected)
-                              ? (IslandBridge.bluetoothDevices[0].name || "Connected")
-                              : (IslandBridge.bluetoothPowered ? "Ready" : "Off")
-                        color: Theme.textSecondary
-                        font.pixelSize: 9
-                        elide: Text.ElideRight
-                        width: parent.parent.width - 48
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            text: "Dock"
+                            color: Theme.textPrimary
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Text {
+                            text: IslandBridge.dockEnabled ? "Visible" : "Hidden"
+                            color: Theme.textSecondary
+                            font.pixelSize: 9
+                        }
                     }
+                }
+
+                HoverHandler { id: dockHover }
+                TapHandler { onTapped: IslandBridge.toggleDock() }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // macOS Section 2: Display (Brightness) Pill Slider
+    // -------------------------------------------------------------
+    Rectangle {
+        width: parent.width
+        height: 40
+        radius: 14
+        color: Theme.cardBackground
+        border.color: Theme.border
+        border.width: 1
+
+        Item {
+            anchors.fill: parent
+            anchors.margins: 6
+
+            // Outer slider track
+            Rectangle {
+                id: brightTrack
+                anchors.fill: parent
+                radius: 14
+                color: Qt.rgba(1, 1, 1, 0.10)
+                clip: true
+
+                // Filled portion
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    width: parent.width * 0.75
+                    radius: 14
+                    color: Qt.rgba(1, 1, 1, 0.82)
+                }
+
+                // Left sun icon
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰃠"
+                    color: "#FF9500"
+                    font.pixelSize: 16
+                }
+
+                // Title label
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 34
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Display"
+                    color: "#1c1c1e"
+                    font.pixelSize: 11
+                    font.bold: true
                 }
             }
 
-            HoverHandler { id: btHover }
-            TapHandler {
-                onTapped: {
-                    IslandBridge.openBluetooth();
+            MouseArea {
+                anchors.fill: parent
+                onWheel: wheel => {
+                    if (wheel.angleDelta.y > 0) IslandBridge.brightnessUp();
+                    else IslandBridge.brightnessDown();
+                }
+                onClicked: IslandBridge.brightnessUp()
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // macOS Section 3: Sound (Volume) Pill Slider
+    // -------------------------------------------------------------
+    Rectangle {
+        width: parent.width
+        height: 40
+        radius: 14
+        color: Theme.cardBackground
+        border.color: Theme.border
+        border.width: 1
+
+        Item {
+            anchors.fill: parent
+            anchors.margins: 6
+
+            // Outer slider track
+            Rectangle {
+                id: soundTrack
+                anchors.fill: parent
+                radius: 14
+                color: Qt.rgba(1, 1, 1, 0.10)
+                clip: true
+
+                // Filled portion
+                Rectangle {
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    width: parent.width * 0.65
+                    radius: 14
+                    color: Qt.rgba(1, 1, 1, 0.82)
+                }
+
+                // Left speaker icon
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰕾"
+                    color: "#007AFF"
+                    font.pixelSize: 16
+                }
+
+                // Title label
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 34
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Sound"
+                    color: "#1c1c1e"
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onWheel: wheel => {
+                    if (wheel.angleDelta.y > 0) IslandBridge.volumeUp();
+                    else IslandBridge.volumeDown();
+                }
+                onClicked: IslandBridge.toggleAudioPopover()
+            }
+        }
+    }
+
+    // -------------------------------------------------------------
+    // macOS Section 4: Now Playing Music Player Card
+    // -------------------------------------------------------------
+    Rectangle {
+        width: parent.width
+        height: 52
+        radius: 14
+        color: Theme.cardBackground
+        border.color: Theme.border
+        border.width: 1
+
+        Item {
+            anchors.fill: parent
+            anchors.margins: 8
+
+            // Album Artwork thumbnail / Pink Music Icon
+            Rectangle {
+                id: artThumb
+                width: 36
+                height: 36
+                radius: 8
+                color: "#FF2D55"
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "󰎆"
+                    color: "#ffffff"
+                    font.pixelSize: 18
+                }
+            }
+
+            // Song & Artist Info
+            Column {
+                anchors.left: artThumb.right
+                anchors.leftMargin: 8
+                anchors.right: mediaBtns.left
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+
+                Text {
+                    text: IslandBridge.title || "Now Playing"
+                    color: Theme.textPrimary
+                    font.pixelSize: 11
+                    font.bold: true
+                    elide: Text.ElideRight
+                    width: parent.width
+                }
+                Text {
+                    text: IslandBridge.subtitle || "Apple Music"
+                    color: Theme.textSecondary
+                    font.pixelSize: 9
+                    elide: Text.ElideRight
+                    width: parent.width
+                }
+            }
+
+            // Playback Controls
+            Row {
+                id: mediaBtns
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                // Prev
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: prevHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
+                    Text { anchors.centerIn: parent; text: "󰒮"; color: Theme.textPrimary; font.pixelSize: 13 }
+                    HoverHandler { id: prevHover }
+                    TapHandler { onTapped: IslandBridge.prevMedia() }
+                }
+
+                // Play / Pause
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: playHover.hovered ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.12)
+                    Text { anchors.centerIn: parent; text: (IslandBridge.visualState === "media" || IslandBridge.visualState === "mediaCompact" || IslandBridge.visualState === "mediaExpanded") ? "󰏤" : "󰐊"; color: Theme.textPrimary; font.pixelSize: 13 }
+                    HoverHandler { id: playHover }
+                    TapHandler { onTapped: IslandBridge.toggleMedia() }
+                }
+
+                // Next
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: nextHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : "transparent"
+                    Text { anchors.centerIn: parent; text: "󰒭"; color: Theme.textPrimary; font.pixelSize: 13 }
+                    HoverHandler { id: nextHover }
+                    TapHandler { onTapped: IslandBridge.nextMedia() }
                 }
             }
         }
     }
 
     // -------------------------------------------------------------
-    // HyperOS Section 2: Volume & Brightness Dual Sliders
-    // -------------------------------------------------------------
-    Row {
-        width: parent.width
-        spacing: 8
-
-        // Volume Bar
-        Rectangle {
-            width: (parent.width - 8) / 2
-            height: 38
-            radius: 10
-            color: Theme.cardBackground
-            border.color: Qt.rgba(1, 1, 1, 0.08)
-            border.width: 1
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: 6
-                spacing: 8
-
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 13
-                    color: volHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.05)
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰕾"
-                        color: Theme.accent
-                        font.pixelSize: 13
-                    }
-                    HoverHandler { id: volHover }
-                    TapHandler { onTapped: IslandBridge.volumeMute() }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-                    width: parent.width - 38
-
-                    Text {
-                        text: "Volume"
-                        color: Theme.textPrimary
-                        font.pixelSize: 10
-                        font.bold: true
-                    }
-
-                    Row {
-                        spacing: 8
-                        Rectangle {
-                            width: 20
-                            height: 16
-                            radius: 4
-                            color: Qt.rgba(1, 1, 1, 0.10)
-                            Text { anchors.centerIn: parent; text: "－"; color: Theme.textPrimary; font.pixelSize: 10 }
-                            TapHandler { onTapped: IslandBridge.volumeDown() }
-                        }
-                        Rectangle {
-                            width: 20
-                            height: 16
-                            radius: 4
-                            color: Qt.rgba(1, 1, 1, 0.10)
-                            Text { anchors.centerIn: parent; text: "＋"; color: Theme.textPrimary; font.pixelSize: 10 }
-                            TapHandler { onTapped: IslandBridge.volumeUp() }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Brightness Bar
-        Rectangle {
-            width: (parent.width - 8) / 2
-            height: 38
-            radius: 10
-            color: Theme.cardBackground
-            border.color: Qt.rgba(1, 1, 1, 0.08)
-            border.width: 1
-
-            Row {
-                anchors.fill: parent
-                anchors.margins: 6
-                spacing: 8
-
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 13
-                    color: Qt.rgba(1, 1, 1, 0.05)
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "󰃠"
-                        color: Theme.accentYellow
-                        font.pixelSize: 13
-                    }
-                }
-
-                Column {
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-                    width: parent.width - 38
-
-                    Text {
-                        text: "Brightness"
-                        color: Theme.textPrimary
-                        font.pixelSize: 10
-                        font.bold: true
-                    }
-
-                    Row {
-                        spacing: 8
-                        Rectangle {
-                            width: 20
-                            height: 16
-                            radius: 4
-                            color: Qt.rgba(1, 1, 1, 0.10)
-                            Text { anchors.centerIn: parent; text: "－"; color: Theme.textPrimary; font.pixelSize: 10 }
-                            TapHandler { onTapped: IslandBridge.brightnessDown() }
-                        }
-                        Rectangle {
-                            width: 20
-                            height: 16
-                            radius: 4
-                            color: Qt.rgba(1, 1, 1, 0.10)
-                            Text { anchors.centerIn: parent; text: "＋"; color: Theme.textPrimary; font.pixelSize: 10 }
-                            TapHandler { onTapped: IslandBridge.brightnessUp() }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // -------------------------------------------------------------
-    // Quick Actions: 5 Quick Utility Tiles (All Symbolic Icons)
+    // macOS Section 5: Telemetry Chips & Theme Switcher Footer
     // -------------------------------------------------------------
     Row {
         width: parent.width
         spacing: 6
 
-        // 1. Pomodoro (25m)
+        // CPU Chip
         Rectangle {
             width: (parent.width - 24) / 5
-            height: 32
+            height: 26
             radius: 8
-            color: pHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
+            color: Qt.rgba(0.40, 0.82, 1.0, 0.12)
+            border.color: Qt.rgba(0.40, 0.82, 1.0, 0.25)
+            border.width: 1
 
-            Text {
+            Row {
                 anchors.centerIn: parent
-                text: "󰔛 Focus"
-                color: Theme.textPrimary
-                font.pixelSize: 9
-                font.bold: true
-            }
-            HoverHandler { id: pHover }
-            TapHandler {
-                onTapped: {
-                    IslandBridge.sendCommand("pomodoro");
-                    IslandBridge.dismiss();
-                }
+                spacing: 3
+                Text { text: "󰍛"; color: "#64d2ff"; font.pixelSize: 10 }
+                Text { text: IslandBridge.systemCpu + "%"; color: Theme.textPrimary; font.pixelSize: 9; font.bold: true }
             }
         }
 
-        // 2. DND Toggle
+        // RAM Chip
         Rectangle {
             width: (parent.width - 24) / 5
-            height: 32
+            height: 26
             radius: 8
-            color: dndHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
+            color: Qt.rgba(0.75, 0.35, 0.95, 0.12)
+            border.color: Qt.rgba(0.75, 0.35, 0.95, 0.25)
+            border.width: 1
 
-            Text {
+            Row {
                 anchors.centerIn: parent
-                text: "󰂛 DND"
-                color: Theme.accentRed
-                font.pixelSize: 9
-                font.bold: true
-            }
-            HoverHandler { id: dndHover }
-            TapHandler {
-                onTapped: {
-                    IslandBridge.dndToggle();
-                    IslandBridge.dismiss();
-                }
+                spacing: 3
+                Text { text: "󰘚"; color: "#bf5af2"; font.pixelSize: 10 }
+                Text { text: IslandBridge.systemMem + "%"; color: Theme.textPrimary; font.pixelSize: 9; font.bold: true }
             }
         }
 
-        // 3. Next Wallpaper
+        // Battery Chip
         Rectangle {
             width: (parent.width - 24) / 5
-            height: 32
+            height: 26
             radius: 8
-            color: wallArea.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
+            color: Qt.rgba(0.20, 0.82, 0.35, 0.12)
+            border.color: Qt.rgba(0.20, 0.82, 0.35, 0.25)
+            border.width: 1
 
-            Text {
+            Row {
                 anchors.centerIn: parent
-                text: "󰸉 Wall"
-                color: Theme.accentGreen
-                font.pixelSize: 9
-                font.bold: true
-            }
-            MouseArea {
-                id: wallArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                onClicked: function(mouse) {
-                    if (mouse.button === Qt.RightButton) {
-                        IslandBridge.openWallpaperManager();
-                    } else {
-                        IslandBridge.nextWallpaper();
-                    }
-                }
-                onPressAndHold: {
-                    IslandBridge.openWallpaperManager();
-                }
+                spacing: 3
+                Text { text: "󰂄"; color: "#30d158"; font.pixelSize: 10 }
+                Text { text: (IslandBridge.deviceBattery !== null ? IslandBridge.deviceBattery + "%" : "AC"); color: Theme.textPrimary; font.pixelSize: 9; font.bold: true }
             }
         }
 
-        // 4. Cycle Theme
+        // Wallpaper Rotator Chip
         Rectangle {
             width: (parent.width - 24) / 5
-            height: 32
+            height: 26
             radius: 8
-            color: thHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
+            color: Qt.rgba(1.0, 0.60, 0.10, 0.12)
+            border.color: Qt.rgba(1.0, 0.60, 0.10, 0.25)
+            border.width: 1
 
-            Text {
+            Row {
                 anchors.centerIn: parent
-                text: "󰏘 Theme"
-                color: Theme.accent
-                font.pixelSize: 9
-                font.bold: true
+                spacing: 3
+                Text { text: "󰸉"; color: "#ff9f0a"; font.pixelSize: 10 }
+                Text { text: "Wall"; color: Theme.textPrimary; font.pixelSize: 9; font.bold: true }
             }
-            HoverHandler { id: thHover }
+            HoverHandler { id: wChipHov }
+            TapHandler { onTapped: IslandBridge.nextWallpaper() }
+        }
+
+        // Theme Cycler Chip
+        Rectangle {
+            width: (parent.width - 24) / 5
+            height: 26
+            radius: 8
+            color: Qt.rgba(0.04, 0.52, 1.0, 0.12)
+            border.color: Qt.rgba(0.04, 0.52, 1.0, 0.25)
+            border.width: 1
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 3
+                Text { text: "󰏘"; color: "#0a84ff"; font.pixelSize: 10 }
+                Text { text: "Theme"; color: Theme.textPrimary; font.pixelSize: 9; font.bold: true }
+            }
+            HoverHandler { id: thChipHov }
             TapHandler {
                 onTapped: {
                     var themes = [
@@ -434,62 +682,6 @@ Column {
                     var next = themes[(idx + 1) % themes.length];
                     IslandBridge.setTheme(next);
                 }
-            }
-        }
-
-        // 5. Toggle Dock
-        Rectangle {
-            width: (parent.width - 24) / 5
-            height: 32
-            radius: 8
-            color: dkHover.hovered ? Qt.rgba(1, 1, 1, 0.15) : Theme.cardBackground
-
-            Text {
-                anchors.centerIn: parent
-                text: "󰀻 Dock"
-                color: Theme.accentPurple
-                font.pixelSize: 9
-                font.bold: true
-            }
-            HoverHandler { id: dkHover }
-            TapHandler {
-                onTapped: IslandBridge.toggleDock()
-            }
-        }
-    }
-
-    // -------------------------------------------------------------
-    // HyperOS Section 4: Live Hardware Telemetry Footer
-    // -------------------------------------------------------------
-    Rectangle {
-        width: parent.width
-        height: 24
-        radius: 6
-        color: Qt.rgba(0, 0, 0, 0.35)
-
-        Row {
-            anchors.centerIn: parent
-            spacing: 16
-
-            Text {
-                text: "󰍛 CPU " + IslandBridge.systemCpu + "%"
-                color: IslandBridge.systemCpu > 80 ? Theme.accentRed : Theme.textSecondary
-                font.pixelSize: 9
-                font.bold: true
-            }
-
-            Text {
-                text: "󰘚 RAM " + IslandBridge.systemMem + "%"
-                color: IslandBridge.systemMem > 85 ? Theme.accentRed : Theme.textSecondary
-                font.pixelSize: 9
-                font.bold: true
-            }
-
-            Text {
-                text: "󰂄 Battery " + (IslandBridge.deviceBattery !== null ? IslandBridge.deviceBattery + "%" : "AC")
-                color: Theme.accentGreen
-                font.pixelSize: 9
-                font.bold: true
             }
         }
     }
