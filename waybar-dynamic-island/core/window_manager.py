@@ -183,7 +183,15 @@ class WindowManager:
         try:
             # 1. Show window from scratchpad
             cmd_show = f"[con_id={con_id}] scratchpad show"
-            subprocess.run(["swaymsg", cmd_show], capture_output=True, text=True)
+            res_show = subprocess.run(["swaymsg", cmd_show], capture_output=True, text=True)
+            if res_show.returncode != 0:
+                err = res_show.stderr.strip() or "Window not found in scratchpad"
+                return {
+                    "status": "error",
+                    "stale": True,
+                    "con_id": con_id,
+                    "message": f"Window {con_id} is stale or closed ({err})"
+                }
 
             # 2. Focus window
             cmd_focus = f"[con_id={con_id}] focus"
@@ -199,7 +207,7 @@ class WindowManager:
                 }
             return {
                 "status": "error",
-                "message": f"Sway error: {res.stderr.strip() or 'Failed to restore'}"
+                "message": f"Sway error: {res.stderr.strip() or 'Failed to focus'}"
             }
         except Exception as e:
-            return {"status": "error", "message": f"Restore failed: {e}"}
+            return {"status": "error", "stale": True, "con_id": con_id, "message": f"Restore failed: {e}"}

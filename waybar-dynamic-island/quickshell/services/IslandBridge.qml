@@ -398,11 +398,32 @@ QtObject {
         if (p) p.running = true;
     }
 
+    property var activeRestoringIds: ({})
+    property real lastRestoreClickMs: 0
+
     function restoreWindow(conId) {
+        if (!conId) return;
+        var now = Date.now();
+        if (now - lastRestoreClickMs < 350) {
+            return; // Debounce rapid repeated clicks
+        }
+        if (activeRestoringIds[conId]) {
+            return; // Already restoring
+        }
+        lastRestoreClickMs = now;
+        activeRestoringIds[conId] = true;
+
         var p = appLauncherComponent.createObject(root, {
             command: ["island-ctl", "windows", "restore", "" + conId]
         });
         if (p) p.running = true;
+    }
+
+    function notifyRestoreFinished(conId) {
+        if (conId && activeRestoringIds[conId]) {
+            delete activeRestoringIds[conId];
+        }
+        sendCommand("window_restore_finished", ["" + (conId || 0)]);
     }
 
     function nextMinimizedWindow() {

@@ -1118,7 +1118,7 @@ class TestMacOSWindowMinimizeAndRestore(unittest.TestCase):
             self.assertEqual(w["app_id"], "kitty")
             self.assertEqual(w["name"], "Terminal — fish")
             self.assertEqual(w["output"], "eDP-1")
-            self.assertEqual(w["workspace"], "active")
+            self.assertEqual(w["workspace"], "1")
             self.assertEqual(w["rect"]["width"], 800)
             self.assertEqual(w["icon"], "󰄛")
             self.assertTrue(w["focused"])
@@ -1354,6 +1354,72 @@ class TestMacOSWindowMinimizeAndRestore(unittest.TestCase):
                 res_res = self.monitor.restore_window(con_id)
                 self.assertEqual(res_min["status"], "ok")
                 self.assertEqual(res_res["status"], "ok")
+
+    def test_window_restore_metadata_retrieval(self):
+        con_id = 888
+        self.monitor._cached_windows = [{
+            "id": con_id, "app_id": "org.telegram.desktop", "name": "Telegram",
+            "focused": False, "minimized": True, "rect": {"x": 120, "y": 80, "width": 800, "height": 600},
+            "workspace": "2", "output": "eDP-1"
+        }]
+        self.monitor._last_geometries[con_id] = {"x": 120, "y": 80, "width": 800, "height": 600}
+        self.monitor._last_workspaces[con_id] = "2"
+        self.monitor._last_outputs[con_id] = "eDP-1"
+
+        restored_callbacks = []
+        self.monitor.on_window_restored = lambda w: restored_callbacks.append(w)
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stderr="")
+            res = self.monitor.restore_window(con_id)
+            self.assertEqual(res["status"], "ok")
+            self.assertEqual(res["workspace"], "2")
+            self.assertEqual(res["output"], "eDP-1")
+            self.assertEqual(res["rect"]["width"], 800)
+            self.assertEqual(len(restored_callbacks), 1)
+            self.assertEqual(restored_callbacks[0]["output"], "eDP-1")
+
+    def test_window_restore_rapid_click_debounce(self):
+        con_id = 777
+        self.monitor._cached_windows = [{
+            "id": con_id, "app_id": "kitty", "name": "Kitty",
+            "focused": False, "minimized": True, "rect": {"x": 0, "y": 0, "width": 640, "height": 480}
+        }]
+        # Mark con_id as actively restoring
+        self.monitor._restoring_ids.add(con_id)
+
+        with patch("subprocess.run") as mock_run:
+            res = self.monitor.restore_window(con_id)
+            self.assertEqual(res["status"], "busy")
+            self.assertIn("already in progress", res["message"])
+            # Verify swaymsg was NOT called for duplicate restore
+            mock_run.assert_not_called()
+
+        self.monitor._restoring_ids.clear()
+
+    def test_window_restore_never_spawns_duplicate_process_on_stale(self):
+        stale_id = 999999
+        self.monitor._cached_windows = []
+
+        with patch("subprocess.Popen") as mock_popen, patch("subprocess.run") as mock_run:
+            res = self.monitor.restore_window(stale_id)
+            self.assertEqual(res["status"], "error")
+            self.assertTrue(res.get("stale"))
+            # Crucial: verify NO process was launched
+            mock_popen.assert_not_called()
+
+    def test_window_restore_finished_action(self):
+        loop = asyncio.new_event_loop()
+        try:
+            with patch.object(self.daemon.window_monitor, "focus_window") as mock_focus:
+                mock_focus.return_value = {"status": "ok"}
+                res = loop.run_until_complete(
+                    self.daemon.dispatch_action("window_restore_finished", {"con_id": 123}, None)
+                )
+                self.assertEqual(res["status"], "ok")
+                mock_focus.assert_called_once_with(123)
+        finally:
+            loop.close()
 
 
 class TestWifiAndBluetoothManagers(unittest.TestCase):

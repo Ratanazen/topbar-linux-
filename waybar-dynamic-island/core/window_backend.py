@@ -167,6 +167,9 @@ class SwayWindowMonitor:
         # In-memory caches to eliminate constant polling and socket leaks
         self._cached_windows: List[Dict[str, Any]] = []
         self._last_geometries: Dict[int, Dict[str, int]] = {}
+        self._last_workspaces: Dict[int, str] = {}
+        self._last_outputs: Dict[int, str] = {}
+        self._restoring_ids: set = set()
         self._prev_minimized_ids: set = set()
         self._window_states: Dict[int, str] = {}
         self._thumbnail_paths: Dict[int, str] = {}
@@ -188,7 +191,10 @@ class SwayWindowMonitor:
             self._cached_windows = [w for w in self._cached_windows if w["id"] != con_id]
             self._prev_minimized_ids.discard(con_id)
             self._last_geometries.pop(con_id, None)
+            self._last_workspaces.pop(con_id, None)
+            self._last_outputs.pop(con_id, None)
             self._thumbnail_paths.pop(con_id, None)
+            self._restoring_ids.discard(con_id)
             self._window_states[con_id] = WindowState.CLOSED.value
         cleanup_window_thumbnail(con_id)
         if self.on_window_change:
@@ -280,7 +286,6 @@ class SwayWindowMonitor:
 
                 is_scratchpad = (
                     ws_name == "__i3_scratch"
-                    or con.scratchpad_state != "none"
                     or (con.parent and getattr(con.parent, "name", "") == "__i3_scratch")
                 )
 
@@ -308,12 +313,20 @@ class SwayWindowMonitor:
 
                 if not is_scratchpad:
                     self._last_geometries[con_id] = rect
+                    if ws_name and ws_name != "__i3_scratch":
+                        self._last_workspaces[con_id] = ws_name
+                    if output_name:
+                        self._last_outputs[con_id] = output_name
                     self._set_window_state(con_id, WindowState.NORMAL)
                 else:
                     current_minimized_ids.add(con_id)
-                    # Preserve last known non-scratchpad geometry if available
+                    # Preserve last known non-scratchpad geometry, workspace, and output if available
                     if con_id in self._last_geometries:
                         rect = self._last_geometries[con_id]
+                    if con_id in self._last_workspaces:
+                        ws_name = self._last_workspaces[con_id]
+                    if con_id in self._last_outputs:
+                        output_name = self._last_outputs[con_id]
                     self._set_window_state(con_id, WindowState.MINIMIZED)
 
                 win_info = {
@@ -340,6 +353,9 @@ class SwayWindowMonitor:
                 cleanup_window_thumbnail(cid)
                 self._thumbnail_paths.pop(cid, None)
                 self._last_geometries.pop(cid, None)
+                self._last_workspaces.pop(cid, None)
+                self._last_outputs.pop(cid, None)
+                self._restoring_ids.discard(cid)
                 self._set_window_state(cid, WindowState.CLOSED)
 
             # Detect state transitions (minimize / restore)
@@ -382,11 +398,13 @@ class SwayWindowMonitor:
             new_windows: List[Dict[str, Any]] = []
             minimized_ids: set = set()
 
-            def traverse(node, in_scratch=False, current_output=""):
+            def traverse(node, in_scratch=False, current_output="", current_workspace=""):
                 is_scratch = in_scratch or (node.get("name") == "__i3_scratch")
                 node_type = node.get("type", "")
                 if node_type == "output":
                     current_output = node.get("name", "")
+                elif node_type == "workspace":
+                    current_workspace = node.get("name", "")
 
                 if (node_type in ("con", "floating_con")) and node.get("name") and (node.get("app_id") or node.get("window_properties")):
                     raw_app = node.get("app_id") or node.get("window_properties", {}).get("class") or ""
@@ -400,13 +418,23 @@ class SwayWindowMonitor:
                         "width": node_rect.get("width", 0),
                         "height": node_rect.get("height", 0),
                     }
+                    ws = current_workspace or ("__i3_scratch" if is_scratch else "active")
+                    out = current_output
                     if not is_scratch:
                         self._last_geometries[con_id] = rect
+                        if current_workspace and current_workspace != "__i3_scratch":
+                            self._last_workspaces[con_id] = current_workspace
+                        if current_output:
+                            self._last_outputs[con_id] = current_output
                         self._set_window_state(con_id, WindowState.NORMAL)
                     else:
                         minimized_ids.add(con_id)
                         if con_id in self._last_geometries:
                             rect = self._last_geometries[con_id]
+                        if con_id in self._last_workspaces:
+                            ws = self._last_workspaces[con_id]
+                        if con_id in self._last_outputs:
+                            out = self._last_outputs[con_id]
                         self._set_window_state(con_id, WindowState.MINIMIZED)
 
                     new_windows.append({
@@ -418,15 +446,15 @@ class SwayWindowMonitor:
                         "icon_path": resolve_app_icon_svg(title or raw_app, raw_app),
                         "focused": focused,
                         "minimized": is_scratch,
-                        "workspace": "__i3_scratch" if is_scratch else "active",
-                        "output": current_output,
+                        "workspace": ws,
+                        "output": out,
                         "rect": rect,
                         "thumbnail": self._thumbnail_paths.get(con_id, ""),
                         "state": self.get_window_state(con_id),
                     })
 
                 for child in node.get("nodes", []) + node.get("floating_nodes", []):
-                    traverse(child, is_scratch, current_output)
+                    traverse(child, is_scratch, current_output, current_workspace)
 
             traverse(tree)
             with self._lock:
@@ -535,37 +563,67 @@ class SwayWindowMonitor:
             return {"status": "error", "message": str(e)}
 
     def restore_window(self, con_id: int) -> Dict[str, Any]:
-        """Restore window from scratchpad and focus it via Sway IPC."""
+        """Restore window from scratchpad and focus it via Sway IPC with animation coordination."""
         if not shutil.which("swaymsg"):
             return {"status": "error", "message": "swaymsg not available"}
 
-        windows = self.get_windows()
-        target = next((w for w in windows if w["id"] == con_id), None)
-        rect = self._last_geometries.get(con_id, target.get("rect", {}) if target else {})
-        thumb_path = self._thumbnail_paths.get(con_id, target.get("thumbnail", "") if target else "")
-
-        # Transition state: RESTORE_REQUESTED
-        self._set_window_state(con_id, WindowState.RESTORE_REQUESTED)
-
-        win_info = dict(target) if target else {
-            "id": con_id,
-            "app_id": "",
-            "name": f"Window {con_id}",
-            "title": f"Window {con_id}",
-            "icon": "󰖲",
-            "rect": rect,
-        }
-        win_info["minimized"] = False
-        win_info["rect"] = rect
-        win_info["thumbnail"] = thumb_path
-        win_info["state"] = WindowState.RESTORE_ANIMATING.value
-
-        # Transition state: RESTORE_ANIMATING
-        self._set_window_state(con_id, WindowState.RESTORE_ANIMATING)
+        # Guard against rapid repeated clicks / duplicate concurrent restores
+        with self._lock:
+            if con_id in self._restoring_ids:
+                return {
+                    "status": "busy",
+                    "con_id": con_id,
+                    "message": f"Window {con_id} restore already in progress"
+                }
+            self._restoring_ids.add(con_id)
 
         try:
+            windows = self.get_windows()
+            target = next((w for w in windows if w["id"] == con_id), None)
+
+            # If target missing or closed, handle stale window safely — never launch duplicate apps
+            if not target:
+                log.warning(f"Window {con_id} not found in tree. Cleaning up stale record.")
+                self._handle_stale_window(con_id)
+                with self._lock:
+                    self._restoring_ids.discard(con_id)
+                return {
+                    "status": "error",
+                    "stale": True,
+                    "con_id": con_id,
+                    "message": f"Window {con_id} is no longer open"
+                }
+
+            rect = self._last_geometries.get(con_id, target.get("rect", {}))
+            workspace = self._last_workspaces.get(con_id, target.get("workspace", ""))
+            output = self._last_outputs.get(con_id, target.get("output", ""))
+            thumb_path = self._thumbnail_paths.get(con_id, target.get("thumbnail", ""))
+
+            # Transition state: RESTORE_REQUESTED
+            self._set_window_state(con_id, WindowState.RESTORE_REQUESTED)
+
+            win_info = dict(target)
+            win_info["minimized"] = False
+            win_info["rect"] = rect
+            win_info["workspace"] = workspace
+            win_info["output"] = output
+            win_info["thumbnail"] = thumb_path
+            win_info["state"] = WindowState.RESTORE_ANIMATING.value
+
+            # Transition state: RESTORE_ANIMATING
+            self._set_window_state(con_id, WindowState.RESTORE_ANIMATING)
+
+            # Broadcast restore event immediately so the reverse genie animation starts in Quickshell
+            if self.on_window_restored:
+                try:
+                    self.on_window_restored(win_info)
+                except Exception as e:
+                    log.debug(f"on_window_restored error: {e}")
+
+            # Restore window from Sway scratchpad onto desktop
             cmd = f"[con_id={con_id}] scratchpad show; [con_id={con_id}] focus"
             res = subprocess.run(["swaymsg", cmd], capture_output=True, text=True)
+
             if res.returncode == 0:
                 log.info(f"Restored window {con_id} from Sway scratchpad")
                 with self._lock:
@@ -580,13 +638,10 @@ class SwayWindowMonitor:
                 cleanup_window_thumbnail(con_id)
                 self._thumbnail_paths.pop(con_id, None)
 
-                if self.on_window_restored:
-                    try:
-                        self.on_window_restored(win_info)
-                    except Exception as e:
-                        log.debug(f"on_window_restored error: {e}")
-
                 self._set_window_state(con_id, WindowState.NORMAL)
+
+                with self._lock:
+                    self._restoring_ids.discard(con_id)
 
                 return {
                     "status": "ok",
@@ -594,20 +649,26 @@ class SwayWindowMonitor:
                     "restored": True,
                     "window": win_info,
                     "rect": rect,
+                    "workspace": workspace,
+                    "output": output,
                     "message": f"Window {con_id} restored and focused"
                 }
             else:
                 err = res.stderr.strip()
                 log.warning(f"Failed to restore window {con_id}: {err}. Handling stale window.")
                 self._handle_stale_window(con_id)
+                with self._lock:
+                    self._restoring_ids.discard(con_id)
                 return {
                     "status": "error",
                     "stale": True,
                     "con_id": con_id,
-                    "message": f"Window {con_id} is stale or closed ({err})"
+                    "message": f"Window {con_id} failed to restore ({err})"
                 }
         except Exception as e:
             self._handle_stale_window(con_id)
+            with self._lock:
+                self._restoring_ids.discard(con_id)
             return {"status": "error", "stale": True, "con_id": con_id, "message": str(e)}
 
     def focus_window(self, con_id: int) -> Dict[str, Any]:

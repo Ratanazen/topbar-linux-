@@ -40,6 +40,7 @@ PanelWindow {
     property string appTitle: ""
     property string thumbnailPath: ""
     property int animDuration: 420
+    property int animWindowId: 0
 
     readonly property bool isLampStyle: animStyle === "macos-lamp" ||
                                         animStyle === "lamp" ||
@@ -120,6 +121,11 @@ PanelWindow {
         function onWindowAnimationRequested(data) {
             if (!data || !data.rect) return;
 
+            // Multi-monitor matching: if target output is known, only animate on matching screen
+            if (data.output && screenTarget && screenTarget.name && data.output !== screenTarget.name) {
+                return;
+            }
+
             if (cardAnim.running) {
                 cardAnim.stop();
             }
@@ -129,6 +135,8 @@ PanelWindow {
             var h = r.height > 50 ? r.height : 480;
             var x = r.x >= 0 ? r.x : (screenTarget.width - w) / 2;
             var y = r.y >= 0 ? r.y : 60;
+
+            animWindowId = data.id || 0;
 
             animType = data.type || "minimize";
             animStyle = (data.style || "macos-lamp").toLowerCase();
@@ -173,14 +181,14 @@ PanelWindow {
                 startW = destW;
                 startH = destH;
                 startR = destR;
-                startOp = 0.95;
+                startOp = 0.2;
 
                 endX = x;
                 endY = y;
                 endW = w;
                 endH = h;
                 endR = 12;
-                endOp = 0.0;
+                endOp = 1.0;
 
                 // On restore, emit immediate absorption pulse from island mouth
                 IslandBridge.triggerAbsorptionPulse();
@@ -212,7 +220,7 @@ PanelWindow {
     Item {
         id: lampContainer
         anchors.fill: parent
-        visible: isAnimating && isLampStyle && normT < 0.98
+        visible: isAnimating && isLampStyle && (animType === "restore" ? (normT <= 1.0) : (normT < 0.98))
         opacity: Math.max(0.0, Math.min(1.0, (1.0 - normT * 0.95) * 1.5))
 
         // A. Luminous Suction Beam (Ray connecting Island to Window Top, Image 1 Step 2)
@@ -562,6 +570,8 @@ PanelWindow {
             // Step 3 (Image 1): App enters Dynamic Island — trigger absorption pulse!
             if (animType === "minimize") {
                 IslandBridge.triggerAbsorptionPulse();
+            } else if (animType === "restore") {
+                IslandBridge.notifyRestoreFinished(animWindowId);
             }
             animCard.opacity = 0.0;
             isAnimating = false;

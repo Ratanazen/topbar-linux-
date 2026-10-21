@@ -283,7 +283,10 @@ class DynamicIslandDaemon:
             "app_id": win_info.get("app_id", ""),
             "title": title,
             "icon": icon,
+            "icon_path": win_info.get("icon_path", ""),
             "rect": rect,
+            "workspace": win_info.get("workspace", ""),
+            "output": win_info.get("output", ""),
             "thumbnail": win_info.get("thumbnail", ""),
             "style": getattr(self.config, "minimize_style", "macos-genie-inspired"),
             "target": getattr(self.config, "minimize_target", "island"),
@@ -1618,28 +1621,58 @@ class DynamicIslandDaemon:
         elif action == "window_restore":
             con_id = int(args.get("con_id", params[0] if params else 0))
             res = self.window_monitor.restore_window(con_id)
+            if res.get("busy"):
+                return res
             if res.get("stale"):
                 mins = self.window_monitor.get_minimized_windows()
                 if mins:
                     self.selected_minimized_index = max(0, min(self.selected_minimized_index, len(mins) - 1))
                 else:
                     self.selected_minimized_index = 0
+                stale_fb = IslandState(
+                    event_id="window-stale",
+                    source="window",
+                    state="error",
+                    priority=Priority.WINDOW_MINIMIZE,
+                    icon="󰅚",
+                    title="Window Closed",
+                    subtitle="Application window is no longer open",
+                    duration=2.0
+                )
+                self.push_transient_event(stale_fb)
                 self.render_and_broadcast()
                 return res
             if res.get("status") == "ok":
+                mins = self.window_monitor.get_minimized_windows()
+                if mins:
+                    self.selected_minimized_index = max(0, min(self.selected_minimized_index, len(mins) - 1))
+                else:
+                    self.selected_minimized_index = 0
+                win = res.get("window", {})
+                title = truncate_text(win.get("name") or win.get("title") or win.get("app_id") or "Window", 18)
+                icon = win.get("icon", "󰖯")
                 feedback = IslandState(
                     event_id="window-res",
                     source="window",
                     state="restoring",
                     priority=Priority.WINDOW_MINIMIZE,
-                    icon="󰖯",
-                    title="Window Restored",
-                    subtitle="Restored from scratchpad",
+                    icon=icon,
+                    icon_path=win.get("icon_path", ""),
+                    title=f"{title} Restored",
+                    subtitle="Restored from Island",
                     duration=1.8
                 )
                 self.push_transient_event(feedback)
                 self.render_and_broadcast()
             return res
+
+        elif action in ("window_restore_finished", "window_restore_done"):
+            con_id = int(args.get("con_id", params[0] if params else 0))
+            if con_id:
+                self.window_monitor.focus_window(con_id)
+            self.dismiss_transient("restoring")
+            self.render_and_broadcast()
+            return {"version": 1, "status": "ok", "message": f"Window {con_id} restoration finalized"}
 
         elif action == "window_toggle":
             con_id = int(args.get("con_id", params[0] if params else 0))
