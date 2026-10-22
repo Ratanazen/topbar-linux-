@@ -467,8 +467,24 @@ class DynamicIslandDaemon:
         stream_payload = state.to_waybar_payload(self.config)
         stream_line = json.dumps(stream_payload, ensure_ascii=False)
 
-        # For Waybar stdout: if frontend/mode is 'quickshell', 'hybrid', or 'both', hide the Waybar pill to prevent overlap
-        if self.config.frontend in ("quickshell", "hybrid", "both") or self.config.mode in ("quickshell", "hybrid"):
+        # For Waybar stdout:
+        # If quickshell is actively running, hide waybar pill to let quickshell render smoothly.
+        # If quickshell is not running or frontend is waybar, stream payload so Dynamic Island is ALWAYS visible!
+        quickshell_active = False
+        if getattr(self.config, "frontend", "waybar") == "quickshell":
+            quickshell_active = True
+        elif getattr(self.config, "frontend", "waybar") in ("hybrid", "both") or getattr(self.config, "mode", "") in ("quickshell", "hybrid"):
+            now = time.monotonic()
+            if now - getattr(self, "_last_qs_check", 0) > 2.0:
+                self._last_qs_check = now
+                try:
+                    res_qs = subprocess.run(["pgrep", "-f", "quickshell.*ratana-island"], capture_output=True)
+                    self._quickshell_active = (res_qs.returncode == 0)
+                except Exception:
+                    self._quickshell_active = False
+            quickshell_active = getattr(self, "_quickshell_active", False)
+
+        if quickshell_active:
             waybar_payload = {"text": "", "alt": "hidden", "tooltip": "", "class": "island hidden"}
             waybar_line = json.dumps(waybar_payload, ensure_ascii=False)
         else:

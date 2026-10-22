@@ -4,18 +4,18 @@
    ============================================================ */
 
 /* --- Reusable Design Tokens --- */
-@define-color bg-glass rgba(20, 24, 30, 0.0);
-@define-color border-glass rgba(255, 255, 255, 0.0);
+@define-color bg-glass rgba(18, 22, 32, 0.70);
+@define-color border-glass rgba(255, 255, 255, 0.22);
 @define-color text-primary #f0f0f5;
-@define-color text-muted rgba(255, 255, 255, 0.55);
-@define-color active-pill-bg #c8c0a8;
-@define-color active-pill-fg #1a1d21;
+@define-color text-muted rgba(255, 255, 255, 0.60);
+@define-color active-pill-bg rgba(255, 255, 255, 0.25);
+@define-color active-pill-fg #ffffff;
 @define-color accent-blue #0a84ff;
 @define-color accent-cyan #5ac8fa;
 @define-color accent-green #30d158;
 @define-color accent-orange #ff9f0a;
 @define-color accent-red #ff453a;
-@define-color hover-glass rgba(255, 255, 255, 0.12);
+@define-color hover-glass rgba(255, 255, 255, 0.14);
 
 /* --- Global Settings --- */
 * {
@@ -378,10 +378,10 @@ tooltip label {
 /* -----------------------------------------------------------------------------
  * 1. THEME PALETTE (Catppuccin Mocha + Apple Obsidian)
  * ----------------------------------------------------------------------------- */
-@define-color island_bg          rgba(11, 11, 15, 0.88);
-@define-color island_bg_hover    rgba(24, 24, 37, 0.94);
-@define-color island_border      rgba(255, 255, 255, 0.12);
-@define-color island_shadow      rgba(0, 0, 0, 0.55);
+@define-color island_bg          rgba(14, 18, 28, 0.82);
+@define-color island_bg_hover    rgba(24, 30, 44, 0.92);
+@define-color island_border      rgba(255, 255, 255, 0.28);
+@define-color island_shadow      rgba(0, 0, 0, 0.50);
 
 /* Accent Colors */
 @define-color ct_rosewater       #f5e0dc;
@@ -433,21 +433,42 @@ tooltip label {
 #custom-island.stable-width,
 #custom-island.content-width {
     font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: @ct_text;
-    background-color: transparent;
-    background: transparent;
-    border: none;
+    color: @text-primary;
+    background-color: @island_bg;
+    background: @island_bg;
+    border: 1px solid @island_border;
     border-radius: 999px;
-    padding: 0px 6px;
-    margin: 0px;
-    box-shadow: none;
+    padding: 1px 12px;
+    margin: 1px 4px;
+    box-shadow: 0 4px 16px @island_shadow;
 
     /* GTK CSS transitions between states */
     transition: min-width 280ms cubic-bezier(0.25, 0.8, 0.25, 1.0),
+                background-color 200ms ease,
+                border-color 200ms ease,
                 color 200ms ease,
                 padding 250ms ease;
+}
+
+#custom-island:hover {
+    background-color: @island_bg_hover;
+    background: @island_bg_hover;
+    border-color: rgba(255, 255, 255, 0.40);
+}
+
+/* Liquid Glass / Legekgalls Theme Preset Classes */
+#custom-island.theme-macos-glass,
+#custom-island.theme-glass,
+#custom-island.theme-liquid-glass,
+#custom-island.theme-legekgalls,
+#custom-island.theme-legekglass {
+    background-color: rgba(14, 18, 28, 0.82);
+    background: rgba(14, 18, 28, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
+    color: #ffffff;
 }
 
 /* -----------------------------------------------------------------------------

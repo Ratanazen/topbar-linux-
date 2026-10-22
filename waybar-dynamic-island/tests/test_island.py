@@ -250,9 +250,17 @@ class TestThemesAndSettings(unittest.TestCase):
             self.assertEqual(self.daemon.config.theme, theme)
 
     def test_theme_aliases(self):
-        # glass -> macos-glass
+        # glass, liquid-glass, legekgalls -> macos-glass
         resp_glass = asyncio.run(self.daemon.dispatch_action("theme_set", {"theme": "glass"}, MagicMock()))
         self.assertEqual(resp_glass["status"], "ok")
+        self.assertEqual(self.daemon.config.theme, "macos-glass")
+
+        resp_liquid = asyncio.run(self.daemon.dispatch_action("theme_set", {"theme": "liquid-glass"}, MagicMock()))
+        self.assertEqual(resp_liquid["status"], "ok")
+        self.assertEqual(self.daemon.config.theme, "macos-glass")
+
+        resp_legek = asyncio.run(self.daemon.dispatch_action("theme_set", {"theme": "legekgalls"}, MagicMock()))
+        self.assertEqual(resp_legek["status"], "ok")
         self.assertEqual(self.daemon.config.theme, "macos-glass")
 
         # minimal -> minimal-dark

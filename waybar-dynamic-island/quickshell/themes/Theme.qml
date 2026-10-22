@@ -4,7 +4,7 @@ import QtQuick
 QtObject {
     id: root
 
-    property string currentTheme: "macos-black"
+    property string currentTheme: "macos-glass"
 
     // Background color
     readonly property color background: {
@@ -21,8 +21,12 @@ QtObject {
             case "low-resource":
                 return Qt.rgba(0.08, 0.08, 0.10, 0.98); // Opaque low-resource surface
             case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
             case "glass":
-                return Qt.rgba(0.07, 0.08, 0.10, 0.72); // Frosted dark glass
+                return Qt.rgba(0.07, 0.09, 0.14, 0.72); // Frosted Liquid Glass
             case "hyperos-dark":
             case "hyperos":
                 return Qt.rgba(0.086, 0.086, 0.102, 0.94); // HyperOS charcoal #16161a
@@ -56,8 +60,12 @@ QtObject {
             case "low-resource":
                 return Qt.rgba(0.20, 0.20, 0.24, 0.90);
             case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
             case "glass":
-                return Qt.rgba(1.0, 1.0, 1.0, 0.24); // Frosted illuminated rim
+                return Qt.rgba(1.0, 1.0, 1.0, 0.25); // Frosted illuminated rim
             case "hyperos-dark":
             case "hyperos":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.14);
@@ -76,6 +84,67 @@ QtObject {
         }
     }
 
+    // Dynamic Island Capsule Background
+    readonly property color capsuleBackground: {
+        switch (currentTheme) {
+            case "macos-tahoe-glass":
+            case "macos-tahoe":
+            case "tahoe":
+                return Qt.rgba(0.04, 0.06, 0.12, 0.88);
+            case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
+            case "glass":
+                return Qt.rgba(0.06, 0.08, 0.13, 0.85); // Translucent Liquid Frosted Glass
+            case "macos-dark-glass":
+            case "macos-dark":
+                return Qt.rgba(0.06, 0.06, 0.09, 0.92);
+            case "macos-light":
+                return Qt.rgba(0.96, 0.96, 0.98, 0.90);
+            case "low-resource":
+                return Qt.rgba(0.08, 0.08, 0.10, 0.98);
+            case "hyperos-dark":
+            case "hyperos":
+                return Qt.rgba(0.086, 0.086, 0.102, 0.94);
+            case "minimal-dark":
+            case "minimal":
+                return Qt.rgba(0.0, 0.0, 0.0, 1.0);
+            case "macos-black":
+            default:
+                return Qt.rgba(0.04, 0.04, 0.06, 0.94);
+        }
+    }
+
+    // Dynamic Island Capsule Border
+    readonly property color capsuleBorder: {
+        switch (currentTheme) {
+            case "macos-tahoe-glass":
+            case "macos-tahoe":
+            case "tahoe":
+                return Qt.rgba(0.40, 0.70, 1.0, 0.35);
+            case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
+            case "glass":
+                return Qt.rgba(1.0, 1.0, 1.0, 0.30); // Luminous white frosted rim
+            case "macos-dark-glass":
+            case "macos-dark":
+                return Qt.rgba(1.0, 1.0, 1.0, 0.20);
+            case "macos-light":
+                return Qt.rgba(0.0, 0.0, 0.0, 0.15);
+            case "minimal-dark":
+            case "minimal":
+                return Qt.rgba(0.24, 0.24, 0.24, 0.95);
+            case "macos-black":
+            default:
+                return Qt.rgba(0.22, 0.22, 0.28, 0.90);
+        }
+    }
+
     // Card background for expanded cards and widgets
     readonly property color cardBackground: {
         switch (currentTheme) {
@@ -91,8 +160,12 @@ QtObject {
             case "low-resource":
                 return Qt.rgba(0.12, 0.12, 0.15, 0.95);
             case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
             case "glass":
-                return Qt.rgba(1.0, 1.0, 1.0, 0.08);
+                return Qt.rgba(1.0, 1.0, 1.0, 0.09);
             case "hyperos-dark":
             case "hyperos":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.07);
@@ -120,6 +193,12 @@ QtObject {
             case "macos-dark-glass":
             case "macos-dark":
             case "low-resource":
+            case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
+            case "glass":
                 return "#ffffff";
             case "macos-light":
                 return "#1d1d1f";
@@ -135,9 +214,6 @@ QtObject {
             case "minimal-dark":
             case "minimal":
                 return "#e5e5e5";
-            case "macos-glass":
-            case "glass":
-                return "#ffffff";
             case "macos-black":
             default:
                 return "#f5f5f7";
@@ -170,8 +246,12 @@ QtObject {
             case "minimal":
                 return "#888888";
             case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
             case "glass":
-                return "#c8c8d0";
+                return "#d0d5e2";
             case "macos-black":
             default:
                 return "#a1a1a6";
@@ -201,6 +281,10 @@ QtObject {
             case "catppuccin":
                 return "#89b4fa"; // Catppuccin Blue
             case "macos-glass":
+            case "liquid-glass":
+            case "liquid":
+            case "legekgalls":
+            case "legekglass":
             case "glass":
                 return "#5ac8fa"; // Apple Ice Blue
             case "minimal-dark":

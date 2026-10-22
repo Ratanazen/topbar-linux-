@@ -38,6 +38,13 @@ THEME_PRESETS = [
 
 THEME_ALIASES: Dict[str, str] = {
     "glass": "macos-glass",
+    "liquid-glass": "macos-glass",
+    "liquidglass": "macos-glass",
+    "liquid": "macos-glass",
+    "legekgalls": "macos-glass",
+    "legekglass": "macos-glass",
+    "light-glass": "macos-light",
+    "lightglass": "macos-light",
     "tahoe": "macos-tahoe-glass",
     "macos-tahoe": "macos-tahoe-glass",
     "macos-dark": "macos-dark-glass",

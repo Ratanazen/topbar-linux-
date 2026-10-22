@@ -59,21 +59,20 @@ Item {
                     }
                 }
 
-                // Row: CPU Label & Apple Logo
-                Row {
+                Item {
                     width: parent.width
-                    spacing: 4
+                    height: 16
 
                     Text {
+                        anchors.left: parent.left
                         text: "CPU"
                         color: Theme.textSecondary
                         font.pixelSize: 11
                         font.bold: true
                     }
 
-                    Item { width: 1; height: 1; Layout.fillWidth: true }
-
                     Text {
+                        anchors.right: parent.right
                         text: ""
                         color: Theme.textPrimary
                         font.pixelSize: 12
@@ -284,10 +283,13 @@ Item {
                 spacing: 8
 
                 // Top: Disk Label and Gauge Icon
-                Row {
+                Item {
                     width: parent.width
+                    height: 24
 
                     Column {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
                         spacing: 1
                         Text {
                             text: "Disk"
@@ -302,10 +304,10 @@ Item {
                         }
                     }
 
-                    Item { width: 1; height: 1; Layout.fillWidth: true }
-
                     // Circular Meter Icon
                     Rectangle {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
                         width: 24
                         height: 24
                         radius: 12

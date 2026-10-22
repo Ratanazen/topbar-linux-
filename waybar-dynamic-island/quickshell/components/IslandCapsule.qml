@@ -8,7 +8,7 @@ Rectangle {
     // Configurable Screen Placement
     anchors.top: parent.top
     anchors.topMargin: IslandBridge.topBarEnabled ? 2 : 3
-    anchors.horizontalCenter: (IslandBridge.capsulePosition === "top-center" || !IslandBridge.capsulePosition) ? parent.horizontalCenter : undefined
+    anchors.horizontalCenter: (IslandBridge.capsulePosition === "top-left" || IslandBridge.capsulePosition === "top-right") ? undefined : parent.horizontalCenter
     anchors.left: IslandBridge.capsulePosition === "top-left" ? parent.left : undefined
     anchors.leftMargin: IslandBridge.capsulePosition === "top-left" ? 24 : 0
     anchors.right: IslandBridge.capsulePosition === "top-right" ? parent.right : undefined
@@ -155,8 +155,8 @@ Rectangle {
     height: targetHeight
     radius: targetRadius
 
-    // Fallback crisp opaque glass styling when compositor blur is disabled or unsupported
-    color: IslandBridge.blurEnabled ? Theme.background : Qt.rgba(0.08, 0.08, 0.1, 0.98)
+    // Authentic Liquid Frosted Glass capsule styling
+    color: Theme.capsuleBackground
     border.color: {
         if (pulseScale > 1.01)
             return Theme.accentCyan;
@@ -166,9 +166,21 @@ Rectangle {
             return Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.45);
         if (IslandBridge.visualState === "recording")
             return Theme.accentRed;
-        return capsuleHover.hovered ? Theme.accent : Theme.border;
+        return capsuleHover.hovered ? Theme.accent : Theme.capsuleBorder;
     }
     border.width: (pulseScale > 1.01 || dropArea.containsDrag || contentHost.isDragHovered || IslandBridge.visualState === "dragActive" || IslandBridge.visualState === "recording") ? 1.5 : 1.0
+
+    // Top specular glass reflection highlight
+    Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: 1
+        height: 1
+        radius: parent.radius
+        color: Qt.rgba(1, 1, 1, 0.28)
+        visible: (Theme.currentTheme.includes("glass") || Theme.currentTheme === "legekgalls" || Theme.currentTheme === "liquid") && !IslandBridge.reducedMotion
+    }
 
     // Smooth Spring Morphing Transitions
     Behavior on width {
