@@ -70,7 +70,7 @@ def normalize_theme(theme_name: str, fallback: Optional[str] = None) -> Optional
 
 class IslandConfig:
     def __init__(self, config_path: Optional[Path] = None):
-        self.config_file = config_path or CONFIG_FILE
+        self.config_file = config_path or Path(os.environ.get("RATANA_CONFIG_FILE", str(CONFIG_FILE)))
         self.mode: str = "waybar-enhanced"  # 'waybar-lite', 'waybar-enhanced', 'quickshell', 'hybrid'
         self.theme: str = "macos-black"
         self.presentation_mode: str = "stable-width"

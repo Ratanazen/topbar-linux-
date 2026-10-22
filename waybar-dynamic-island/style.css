@@ -4,8 +4,8 @@
    ============================================================ */
 
 /* --- Reusable Design Tokens --- */
-@define-color bg-glass rgba(18, 22, 32, 0.70);
-@define-color border-glass rgba(255, 255, 255, 0.22);
+@define-color bg-glass rgba(18, 22, 32, 0.75);
+@define-color border-glass rgba(255, 255, 255, 0.27);
 @define-color text-primary #f0f0f5;
 @define-color text-muted rgba(255, 255, 255, 0.60);
 @define-color active-pill-bg rgba(255, 255, 255, 0.25);
@@ -61,11 +61,11 @@ tooltip label {
 
 /* Left Group 1: Settings & Status Capsule */
 #left1 {
-  background: transparent;
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: @bg-glass;
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
   border-radius: 20px;
-  box-shadow: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   margin: 1px 6px;
   padding: 0 10px;
 }
@@ -102,11 +102,11 @@ tooltip label {
 
 /* Left Group 2: Workspaces Capsule */
 #workspaces {
-  background: transparent;
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: @bg-glass;
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
   border-radius: 20px;
-  box-shadow: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   margin: 1px 6px;
   padding: 2px 6px;
 }
@@ -206,11 +206,11 @@ tooltip label {
    ============================================================ */
 
 .modules-right {
-  background: transparent;
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: @bg-glass;
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
   border-radius: 20px;
-  box-shadow: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   margin: 1px 6px;
   padding: 0 10px;
 }
@@ -378,9 +378,9 @@ tooltip label {
 /* -----------------------------------------------------------------------------
  * 1. THEME PALETTE (Catppuccin Mocha + Apple Obsidian)
  * ----------------------------------------------------------------------------- */
-@define-color island_bg          rgba(14, 18, 28, 0.82);
-@define-color island_bg_hover    rgba(24, 30, 44, 0.92);
-@define-color island_border      rgba(255, 255, 255, 0.28);
+@define-color island_bg          rgba(14, 18, 28, 0.87);
+@define-color island_bg_hover    rgba(24, 30, 44, 0.95);
+@define-color island_border      rgba(255, 255, 255, 0.33);
 @define-color island_shadow      rgba(0, 0, 0, 0.50);
 
 /* Accent Colors */
@@ -464,9 +464,9 @@ tooltip label {
 #custom-island.theme-liquid-glass,
 #custom-island.theme-legekgalls,
 #custom-island.theme-legekglass {
-    background-color: rgba(14, 18, 28, 0.82);
-    background: rgba(14, 18, 28, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: rgba(14, 18, 28, 0.87);
+    background: rgba(14, 18, 28, 0.87);
+    border: 1px solid rgba(255, 255, 255, 0.33);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
     color: #ffffff;
 }

@@ -12,7 +12,7 @@ QtObject {
             case "macos-tahoe-glass":
             case "macos-tahoe":
             case "tahoe":
-                return Qt.rgba(0.06, 0.08, 0.14, 0.76); // Frosted Tahoe Azure Glass
+                return Qt.rgba(0.06, 0.08, 0.14, 0.81); // Frosted Tahoe Azure Glass (+5% contrast)
             case "macos-dark-glass":
             case "macos-dark":
                 return Qt.rgba(0.08, 0.08, 0.11, 0.88); // macOS Dark Glass
@@ -26,7 +26,7 @@ QtObject {
             case "legekgalls":
             case "legekglass":
             case "glass":
-                return Qt.rgba(0.07, 0.09, 0.14, 0.72); // Frosted Liquid Glass
+                return Qt.rgba(0.07, 0.09, 0.14, 0.77); // Frosted Liquid Glass (+5% contrast)
             case "hyperos-dark":
             case "hyperos":
                 return Qt.rgba(0.086, 0.086, 0.102, 0.94); // HyperOS charcoal #16161a
@@ -51,7 +51,7 @@ QtObject {
             case "macos-tahoe-glass":
             case "macos-tahoe":
             case "tahoe":
-                return Qt.rgba(0.40, 0.70, 1.0, 0.25);
+                return Qt.rgba(0.40, 0.70, 1.0, 0.30);
             case "macos-dark-glass":
             case "macos-dark":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.16);
@@ -65,7 +65,7 @@ QtObject {
             case "legekgalls":
             case "legekglass":
             case "glass":
-                return Qt.rgba(1.0, 1.0, 1.0, 0.25); // Frosted illuminated rim
+                return Qt.rgba(1.0, 1.0, 1.0, 0.30); // Frosted illuminated rim (+5%)
             case "hyperos-dark":
             case "hyperos":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.14);
@@ -90,14 +90,14 @@ QtObject {
             case "macos-tahoe-glass":
             case "macos-tahoe":
             case "tahoe":
-                return Qt.rgba(0.04, 0.06, 0.12, 0.88);
+                return Qt.rgba(0.04, 0.06, 0.12, 0.93);
             case "macos-glass":
             case "liquid-glass":
             case "liquid":
             case "legekgalls":
             case "legekglass":
             case "glass":
-                return Qt.rgba(0.06, 0.08, 0.13, 0.85); // Translucent Liquid Frosted Glass
+                return Qt.rgba(0.06, 0.08, 0.13, 0.90); // Translucent Liquid Frosted Glass (+5%)
             case "macos-dark-glass":
             case "macos-dark":
                 return Qt.rgba(0.06, 0.06, 0.09, 0.92);
@@ -123,14 +123,14 @@ QtObject {
             case "macos-tahoe-glass":
             case "macos-tahoe":
             case "tahoe":
-                return Qt.rgba(0.40, 0.70, 1.0, 0.35);
+                return Qt.rgba(0.40, 0.70, 1.0, 0.40);
             case "macos-glass":
             case "liquid-glass":
             case "liquid":
             case "legekgalls":
             case "legekglass":
             case "glass":
-                return Qt.rgba(1.0, 1.0, 1.0, 0.30); // Luminous white frosted rim
+                return Qt.rgba(1.0, 1.0, 1.0, 0.35); // Luminous white frosted rim (+5%)
             case "macos-dark-glass":
             case "macos-dark":
                 return Qt.rgba(1.0, 1.0, 1.0, 0.20);
