@@ -89,7 +89,7 @@ QtObject {
     property bool controlCenterOpen: false
 
     // macOS Top Bar Configuration & State
-    property bool topBarEnabled: true
+    property bool topBarEnabled: false
     property int topBarHeight: 30
     property bool notchEnabled: false
     property int notchWidth: 160

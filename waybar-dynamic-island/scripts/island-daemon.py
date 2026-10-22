@@ -713,9 +713,13 @@ class DynamicIslandDaemon:
             fe = str(fe).lower().strip()
             if fe in ("waybar", "quickshell", "both", "hybrid"):
                 self.config.frontend = fe
+                if fe == "quickshell":
+                    self.config.topbar_enabled = True
+                elif fe in ("hybrid", "waybar", "both"):
+                    self.config.topbar_enabled = False
                 self.config.save()
                 self.render_and_broadcast()
-                return {"version": 1, "status": "ok", "message": f"Set frontend to {fe}", "frontend": fe}
+                return {"version": 1, "status": "ok", "message": f"Set frontend to {fe}", "frontend": fe, "topbar_enabled": self.config.topbar_enabled}
             return {
                 "protocol_version": PROTOCOL_VERSION,
                 "version": 1,
@@ -1162,9 +1166,34 @@ class DynamicIslandDaemon:
             return {"version": 1, "status": "ok", "active": is_active}
 
         elif action in ("topbar_ui", "ui_open", "open_ui"):
-            target_ui = params[0] if params else args.get("target", "")
-            self.ipc_server.broadcast_stream(json.dumps({"ui_action": target_ui}, ensure_ascii=False))
-            return {"version": 1, "status": "ok", "target": target_ui}
+            target_ui = params[0] if params else (args.get("target") or args.get("ui_action") or "")
+            if target_ui in ("hide_bar", "hide"):
+                self.config.topbar_enabled = False
+                self.render_and_broadcast()
+            elif target_ui in ("show_bar", "show"):
+                self.config.topbar_enabled = True
+                self.render_and_broadcast()
+            elif target_ui in ("toggle_bar", "toggle"):
+                self.config.topbar_enabled = not getattr(self.config, "topbar_enabled", False)
+                self.render_and_broadcast()
+            self.ipc_server.broadcast_stream(json.dumps({"ui_action": target_ui, "topbar_enabled": self.config.topbar_enabled}, ensure_ascii=False))
+            return {"version": 1, "status": "ok", "target": target_ui, "topbar_enabled": self.config.topbar_enabled}
+
+        elif action in ("topbar", "topbar_set"):
+            sub = params[0] if params else args.get("subcommand", "status")
+            sub = str(sub).lower().strip()
+            if sub in ("hide", "disable", "off", "0", "false"):
+                self.config.topbar_enabled = False
+            elif sub in ("show", "enable", "on", "1", "true"):
+                self.config.topbar_enabled = True
+            elif sub == "toggle":
+                self.config.topbar_enabled = not getattr(self.config, "topbar_enabled", False)
+            self.render_and_broadcast()
+            self.ipc_server.broadcast_stream(json.dumps({
+                "ui_action": "show_bar" if self.config.topbar_enabled else "hide_bar",
+                "topbar_enabled": self.config.topbar_enabled
+            }, ensure_ascii=False))
+            return {"version": 1, "status": "ok", "topbar_enabled": self.config.topbar_enabled, "message": f"Topbar {'enabled' if self.config.topbar_enabled else 'disabled'}"}
 
 
         # 11. Brightness Controls

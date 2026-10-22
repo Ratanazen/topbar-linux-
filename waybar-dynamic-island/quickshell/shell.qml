@@ -11,7 +11,7 @@ ShellRoot {
 
     // 0. macOS-Style Top Bar (Tahoe Inspired Full Menu Bar)
     Variants {
-        model: Quickshell.screens
+        model: IslandBridge.topBarEnabled ? Quickshell.screens : []
 
         delegate: Component {
             MacTopBar {

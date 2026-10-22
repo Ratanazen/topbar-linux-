@@ -377,7 +377,7 @@ class IslandState:
             "minimize_style": getattr(config, "minimize_style", "scale"),
             "minimize_target": getattr(config, "minimize_target", "island"),
             "minimized_apps_visibility": getattr(config, "minimized_apps_visibility", "auto"),
-            "topbar_enabled": getattr(config, "topbar_enabled", True),
+            "topbar_enabled": getattr(config, "topbar_enabled", False),
             "topbar_height": getattr(config, "topbar_height", 30),
             "notch_enabled": getattr(config, "notch_enabled", False),
             "notch_width": getattr(config, "notch_width", 160),

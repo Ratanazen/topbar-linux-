@@ -798,7 +798,7 @@ def main():
                     print("Quickshell is not running. Launch it with: island-ctl frontend start quickshell")
             elif target in ("hybrid", "both"):
                 subprocess.run(["killall", "-SIGUSR2", "waybar"], capture_output=True)
-                send_ipc("topbar_ui", {"target": "show_bar"})
+                send_ipc("topbar_ui", {"target": "hide_bar"})
         elif sub == "start":
             target = sys.argv[3].lower() if len(sys.argv) > 3 else "quickshell"
             if target == "quickshell":
@@ -844,6 +844,26 @@ def main():
             print("==================================================")
         else:
             sys.stderr.write("Usage: island-ctl frontend <get|set|start|stop|status> [args]\n")
+            sys.exit(1)
+
+    elif cmd in ("topbar", "bar"):
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else "status"
+        if sub in ("status", "get"):
+            res = send_ipc("topbar", {"subcommand": "status"})
+            enabled = res.get("topbar_enabled", False)
+            print(f"Quickshell Topbar: {'[✓] Enabled (Visible)' if enabled else '[✗] Disabled (Hidden)'}")
+        elif sub in ("hide", "disable", "off", "0", "false"):
+            res = send_ipc("topbar", {"subcommand": "hide"})
+            print("Quickshell Topbar hidden.")
+        elif sub in ("show", "enable", "on", "1", "true"):
+            res = send_ipc("topbar", {"subcommand": "show"})
+            print("Quickshell Topbar shown.")
+        elif sub == "toggle":
+            res = send_ipc("topbar", {"subcommand": "toggle"})
+            enabled = res.get("topbar_enabled", False)
+            print(f"Quickshell Topbar toggled: {'Enabled' if enabled else 'Disabled'}")
+        else:
+            sys.stderr.write("Usage: island-ctl topbar <show|hide|toggle|status>\n")
             sys.exit(1)
 
     elif cmd == "dock":

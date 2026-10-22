@@ -179,7 +179,7 @@ Row {
             HoverHandler { id: pillHov }
             TapHandler {
                 onTapped: {
-                    IslandBridge.toggleQuickActions();
+                    IslandBridge.restoreSelectedWindow();
                 }
                 onLongPressed: {
                     IslandBridge.toggleQuickActions();

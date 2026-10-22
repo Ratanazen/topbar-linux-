@@ -12,8 +12,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "ratana-topbar"
     WlrLayershell.keyboardFocus: anyPopoverOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-    WlrLayershell.exclusionMode: ExclusionMode.Normal
-    exclusionMode: ExclusionMode.Normal
+    WlrLayershell.exclusionMode: IslandBridge.topBarEnabled ? ExclusionMode.Normal : ExclusionMode.Ignore
+    exclusionMode: IslandBridge.topBarEnabled ? ExclusionMode.Normal : ExclusionMode.Ignore
 
     // Top anchored full-width menu bar
     anchors.top: true

@@ -99,7 +99,7 @@ class IslandConfig:
         self.idle_show_language: bool = True
         self.language_format: str = "both"  # 'both', 'origin', 'full', 'short'
         self.frontend: str = "waybar"  # 'waybar', 'quickshell', 'both', 'hybrid'
-        self.topbar_enabled: bool = True
+        self.topbar_enabled: bool = False
         self.topbar_height: int = 30
         self.notch_enabled: bool = False
         self.notch_width: int = 160
@@ -231,7 +231,10 @@ class IslandConfig:
                 self.reduced_motion = gen.getboolean("reduced_motion", self.reduced_motion)
                 self.show_full = gen.getboolean("show_full", self.show_full)
                 self.frontend = gen.get("frontend", self.frontend)
-                self.topbar_enabled = gen.getboolean("topbar_enabled", self.topbar_enabled)
+                if "topbar_enabled" in gen:
+                    self.topbar_enabled = gen.getboolean("topbar_enabled", self.topbar_enabled)
+                else:
+                    self.topbar_enabled = (self.frontend == "quickshell")
                 self.topbar_height = gen.getint("topbar_height", self.topbar_height)
                 self.notch_enabled = gen.getboolean("notch_enabled", self.notch_enabled)
                 self.notch_width = gen.getint("notch_width", self.notch_width)
