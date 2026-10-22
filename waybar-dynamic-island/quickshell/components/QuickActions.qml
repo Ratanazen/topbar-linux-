@@ -224,7 +224,7 @@ Column {
 
                     HoverHandler { id: adHover }
                     TapHandler {
-                        onTapped: IslandBridge.sendCommand("event", ["--title", "AirDrop", "--message", "AirDrop Ready • Share Active", "--duration", "3"])
+                        onTapped: IslandBridge.openAirDropPicker()
                     }
                 }
             }

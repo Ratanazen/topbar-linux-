@@ -256,7 +256,7 @@ Rectangle {
 
     MouseArea {
         anchors.fill: parent
-        z: enabled ? 1 : -1
+        z: 0
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         hoverEnabled: false
         pressAndHoldInterval: 350
@@ -296,5 +296,6 @@ Rectangle {
     // Dynamic Island Content
     IslandContent {
         id: contentHost
+        z: 1
     }
 }

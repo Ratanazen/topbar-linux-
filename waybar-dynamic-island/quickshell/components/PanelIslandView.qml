@@ -224,7 +224,7 @@ Item {
                         }
 
                         TapHandler {
-                            onTapped: IslandBridge.sendCommand("share", ["picker"])
+                            onTapped: IslandBridge.openAirDropPicker()
                         }
                     }
                 }

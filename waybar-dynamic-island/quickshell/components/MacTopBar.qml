@@ -136,16 +136,30 @@ PanelWindow {
                     }
                 }
 
-                // Active Application Title (Bold)
-                Text {
-                    text: IslandBridge.activeAppTitle || "Finder"
-                    color: Theme.textPrimary
-                    font.pixelSize: 12
-                    font.bold: true
-                    font.family: Theme.fontFamily
+                // Active Application Title (Bold, Interactive)
+                Rectangle {
+                    height: 22
+                    width: appTitleText.implicitWidth + 8
+                    radius: 4
                     anchors.verticalCenter: parent.verticalCenter
-                    elide: Text.ElideRight
-                    maximumLineCount: 1
+                    color: appTitleHover.hovered ? Qt.rgba(1, 1, 1, 0.14) : "transparent"
+
+                    Text {
+                        id: appTitleText
+                        anchors.centerIn: parent
+                        text: IslandBridge.activeAppTitle || "Finder"
+                        color: appTitleHover.hovered ? Theme.accentCyan : Theme.textPrimary
+                        font.pixelSize: 12
+                        font.bold: true
+                        font.family: Theme.fontFamily
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                    }
+
+                    HoverHandler { id: appTitleHover }
+                    TapHandler {
+                        onTapped: IslandBridge.toggleMinimizedApps()
+                    }
                 }
 
                 // Application Menu Bar (File, Edit, View, Window, Help)

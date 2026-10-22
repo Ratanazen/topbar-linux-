@@ -261,6 +261,9 @@ QtObject {
                         if (msg.dropped_files !== undefined) {
                             root.droppedFiles = msg.dropped_files || [];
                         }
+                        if (msg.share_targets !== undefined) {
+                            root.shareTargets = msg.share_targets || [];
+                        }
                         if (msg.capsule_position !== undefined && root.capsulePosition !== msg.capsule_position) {
                             root.capsulePosition = msg.capsule_position;
                         }
@@ -388,6 +391,18 @@ QtObject {
             command: ["island-ctl", "share", "cancel"]
         });
         if (p) p.running = true;
+    }
+
+    function openAirDropPicker() {
+        dismiss();
+        var p = appLauncherComponent.createObject(root, {
+            command: ["bash", "-c", "SELECTED=$(zenity --file-selection --multiple --separator='|' --title='AirDrop • Select Files to Share' 2>/dev/null); if [ -n \"$SELECTED\" ]; then IFS='|' read -ra FILES <<< \"$SELECTED\"; island-ctl share inspect \"${FILES[@]}\"; fi"]
+        });
+        if (p) p.running = true;
+    }
+
+    function toggleMinimizedApps() {
+        sendCommand("windows", ["manager"]);
     }
 
     // Sway Window Management Actions

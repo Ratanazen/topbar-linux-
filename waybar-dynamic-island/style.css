@@ -196,9 +196,22 @@ tooltip label {
 }
 
 #window {
+  background: @bg-glass;
+  background-color: @bg-glass;
+  border: 1px solid @border-glass;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  margin: 1px 6px;
+  padding: 2px 14px;
   color: @text-primary;
   font-weight: 600;
-  padding: 0 4px;
+  transition: all 0.2s ease;
+}
+
+#window:hover {
+  background-color: @hover-glass;
+  border-color: rgba(255, 255, 255, 0.40);
+  color: @accent-cyan;
 }
 
 /* ============================================================

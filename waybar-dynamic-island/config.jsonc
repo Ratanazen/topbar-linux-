@@ -112,7 +112,14 @@
   /* Zone B: Center Group (Active Window Title) */
   "sway/window": {
     "format": "{title}",
-    "max-length": 55,
+    "max-length": 45,
+    "on-click": "python3 /home/reny/.config/waybar/scripts/island-ctl windows manager",
+    "on-click-right": "python3 /home/reny/.config/waybar/scripts/island-ctl windows min 0",
+    "on-click-middle": "swaymsg fullscreen toggle",
+    "on-scroll-up": "swaymsg focus next",
+    "on-scroll-down": "swaymsg focus prev",
+    "tooltip": true,
+    "tooltip-format": "Active Window: {title}\n\n• Left-click: Open Window Manager\n• Right-click: Minimize Window\n• Middle-click: Toggle Fullscreen\n• Scroll: Switch Focus",
     "rewrite": {
       "(.*) — Mozilla Firefox": "󰈹 $1",
       "(.*) - Google Chrome": " $1",

@@ -1615,6 +1615,30 @@ class DynamicIslandDaemon:
             self.render_and_broadcast()
             return {"version": 1, "status": "ok", "message": "Smart Share cancelled"}
 
+        elif action in ("share", "airdrop", "smart_share"):
+            sub = str(params[0]).lower() if params else "picker"
+            if sub in ("picker", "pick", "open"):
+                async def _run_picker():
+                    try:
+                        cmd = ["zenity", "--file-selection", "--multiple", "--separator=|", "--title=AirDrop • Select Files to Share"]
+                        proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+                        stdout, _ = await proc.communicate()
+                        if proc.returncode == 0 and stdout.strip():
+                            files = [p.strip() for p in stdout.decode().strip().split("|") if p.strip()]
+                            if files:
+                                await self.dispatch_action("share_inspect", {"urls": files}, None)
+                    except Exception as err:
+                        log.warning(f"AirDrop file picker error: {err}")
+                asyncio.create_task(_run_picker())
+                return {"version": 1, "status": "ok", "message": "Opening AirDrop file selection dialog..."}
+            elif sub == "cancel":
+                return await self.dispatch_action("share_cancel", args, None)
+            elif sub == "execute":
+                return await self.dispatch_action("share_execute", args, None)
+            else:
+                raw_urls = params
+                return await self.dispatch_action("share_inspect", {"urls": raw_urls}, None)
+
         # 17. Sway Window Management
         elif action == "window_minimize":
             con_id = int(args.get("con_id", params[0] if params else 0))
@@ -1825,7 +1849,7 @@ class DynamicIslandDaemon:
             self.push_transient_event(min_state)
             return {"version": 1, "status": "ok", "message": "Showing minimized applications manager"}
 
-        elif action in ("quick_actions", "quick_settings", "control", "control_center"):
+        elif action in ("quick_actions", "quick-actions", "quick_settings", "quick-settings", "control", "control_center", "control-center"):
             current = self.get_current_state()
             if current and (current.state in ("quickActions", "quick_actions", "quick_settings") or getattr(current, "event_id", "") == "quick-actions-ui"):
                 self.dismiss_transient()
